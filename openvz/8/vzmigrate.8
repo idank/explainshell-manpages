@@ -1,0 +1,237 @@
+.\" Stolen from groff's an-ext.tmac as of 2012-Mar-05
+.nr mS 0
+.
+.
+.\" Declare start of command synopsis.  Sets up hanging indentation.
+.de SY
+.  ie !\\n(mS \{\
+.    nh
+.    nr mS 1
+.    nr mA \\n(.j
+.    ad l
+.    nr mI \\n(.i
+.  \}
+.  el \{\
+.    br
+.    ns
+.  \}
+.
+.  nr mT \w'\fB\\$1\fP\ '
+.  HP \\n(mTu
+.  B "\\$1"
+..
+.
+.
+.\" End of command synopsis.  Restores adjustment.
+.de YS
+.  in \\n(mIu
+.  ad \\n(mA
+.  hy \\n(HY
+.  nr mS 0
+..
+.
+.
+.\" Declare optional option.
+.de OP
+.  ie \\n(.$-1 \
+.    RI "[\fB\\$1\fP" "\ \\$2" "]"
+.  el \
+.    RB "[" "\\$1" "]"
+..
+.
+.
+.\" Start example.
+.de EX
+.  nr mE \\n(.f
+.  nf
+.  nh
+.  ft CW
+..
+.
+.
+.\" End example.
+.de EE
+.  ft \\n(mE
+.  fi
+.  hy \\n(HY
+..
+.TH vzmigrate 8 "5 Mar 2013" "OpenVZ" "Containers"
+
+.SH NAME
+vzmigrate \- migrate a container between two OpenVZ servers
+
+.SH SYNOPSIS
+.SY vzmigrate
+.OP -r\fR|\fB--remove-area\ \fByes\fR|\fBno
+.OP --ssh=\fIssh_options
+.OP --rsync=\fIrsync_options
+.OP --keep-dst
+.OP --live
+.OP -c\fR|\fB--compact
+.OP -s\fR|\fB--snapshot
+.OP --check-only\fR|\fB--dry-run
+.OP -f\fR|\fB--nodeps\fR[\fB=\fIcheck\fR[\fB,\fIcheck\fR\ ...]]
+.OP -t\fR|\fB--times
+.OP -v
+.I destination_address CTID
+.SY vzmigrate
+.BR -h | --help | --usage | -?
+.YS
+.SH DESCRIPTION
+This utility is used to migrate a container from one (source) Hardware Node (HN)
+to another (destination) HN. The utility can migrate either stopped or running
+container. For a stopped container, simple CT private area transfer is performed
+(\fBrsync\fR(1) is used for file transfer). For running containers,
+either traditional (with CT stop and start) or live migration is possible.
+
+This program uses \fBssh\fR as a transport layer. You will need to put ssh
+public key to destination node and be able to connect to node without
+entering password.
+
+.SH OPTIONS
+.TP
+\fB-r\fR, \fB--remove-area\fR \fByes\fR | \fBno\fR
+Whether to remove a container area on source HN for the successfully
+migrated container. Default is \fByes\fR.
+
+.TP
+\fB--ssh=\fIoptions\fR
+Additional \fIoptions\fR that will be passed to ssh while establishing
+connection to destination HN.
+
+.TP
+\fB--rsync=\fIoptions\fR
+Additional \fIoptions\fR that will be passed to \fBrsync\fR(8).
+You may add options like \fB-z\fR to enable data compression
+if you are migrating over a slow link.
+
+.TP
+.B --keep-dst
+Do not clean synced destination container private area in case of some
+error. It makes sense to use this option on big container migration to avoid
+syncing container private area again in case some error (on container stop for
+example) occurs during first migration attempt.
+
+.TP
+.B --live
+Perform live migration: instead of restarting a container, checkpoint
+and restore are used, so there is no container downtime or service
+interruption. Additional steps are performed to minimize the time
+when a container is in suspended state.
+Option \fB--online\fR can be used as a backward-compatible alias.
+
+.TP
+\fB-c\fR, \fB--compact\fR
+Compact a container image (i.e. run \fBvzctl compact\fR)
+before migration. Works for ploop only, ignored otherwise.
+
+.TP
+\fB-s\fR, \fB--snapshot\fR
+Create a container snapshot (i.e. run \fBvzctl snapshot\fR)
+before migration. Works for ploop only, ignored otherwise.
+
+.TP
+\fB--check-only\fR, \fB--dry-run\fR
+Do not perform actual migration, stop after preliminary checks.
+This is used to check if a CT can possibly be migrated. Combine
+with \fB--live\fR to enable more checks for live migration case.
+
+.TP
+\fB-f\fR|\fB--nodeps\fR[\fB=\fIcheck\fR[\fB,\fIcheck\fR\ ...\]\]
+Continue migration, ignoring some or all preliminary check failures.
+Particular checks can be ignored by providing an argument to
+\fB--nodeps\fR option. The following options can be used
+(comma-separated):
+.br
+\(bu \fBcpu\fR	\- ignore cpu capabilities check;
+.br
+\(bu \fBipv6\fR	\- ignore ipv6 module check.
+
+.TP
+\fB-t\fR, \fB--times\fR
+At the end of live migration, output various timings for migration stages
+that affect total suspended CT time. Note that it only makes sense
+with \fB--live\fR.
+
+.TP
+.B -v
+Verbose mode. Causes \fBvzmigrate\fP to print debugging messages about
+its progress. Note that \fB-v\fR automatically implies \fB-t\fR.
+Multiple \fB-v\fR options increase the verbosity.
+
+.TP
+.BR -h | --help | --usage | -?
+Print usage info and exit.
+
+.SH EXAMPLES
+Migration of CT 101 to \fB192.168.1.130\fR with downtime:
+.PP
+.EX
+   vzmigrate 192.168.1.130 101
+.EE
+
+Online migration of CT 102 to \fB192.168.1.130\fR:
+.PP
+.EX
+   vzmigrate --live 192.168.1.130 102
+.EE
+.SH EXIT STATUS
+.TP
+.B 0 EXIT_OK
+Command completed successfully.
+.TP
+.B 1 EXIT_USAGE
+Bad command line options.
+.TP
+.B 2 EXIT_VE_STOPPED
+Container is stopped.
+.TP
+.B 4 EXIT_CONNECT
+Can't connect to destination (source) HN.
+.TP
+.B 6 EXIT_COPY
+Container private area copying/moving failed.
+.TP
+.B 7 EXIT_VE_START
+Can't start or restore destination CT.
+.TP
+.B 8 EXIT_VE_STOP
+Can't stop or checkpoint source CT.
+.TP
+.B 9 EXIT_EXISTS
+Container already exists on destination HN.
+.TP
+.B 10 EXIT_NOTEXIST
+Container does not exists on source HN.
+.TP
+.B 12 EXIT_IP_INUSE
+You attempt to migrate CT which IP address(es) are already in use
+on the destination node.
+.TP
+.B 13 EXIT_QUOTA
+Operation with CT quota failed.
+.TP
+.B 14 EXIT_OVZ_NOT_RUNNING
+OpenVZ is not running, or some required kernel modules are not loaded.
+.TP
+.B 15 EXIT_APPLY_CONFIG
+Unable to set CT name on destination node.
+.TP
+.B 16 EXIT_PLOOP_UNSUP
+Ploop is not supported by destination node.
+.TP
+.B 17 EXIT_UNSUP_CPT_VER
+CPT version incompatibility with the destination node.
+.TP
+.B 18 EXIT_UNSUP_CPU
+Destination node CPU incompatibility.
+.TP
+.B 19 EXIT_CANT_READ_REMOTE_CONFIG
+Unable to read remote vz.conf.
+
+.SH SEE ALSO
+.BR rsync (1),
+.BR vzcptcheck (8).
+
+.SH COPYRIGHT
+Copyright (C) 2001-2013, Parallels, Inc. Licensed under GNU GPL.

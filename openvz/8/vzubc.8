@@ -1,0 +1,186 @@
+.\" Stolen from groff's an-ext.tmac as of 2012-Mar-05
+.nr mS 0
+.
+.
+.\" Declare start of command synopsis.  Sets up hanging indentation.
+.de SY
+.  ie !\\n(mS \{\
+.    nh
+.    nr mS 1
+.    nr mA \\n(.j
+.    ad l
+.    nr mI \\n(.i
+.  \}
+.  el \{\
+.    br
+.    ns
+.  \}
+.
+.  nr mT \w'\fB\\$1\fP\ '
+.  HP \\n(mTu
+.  B "\\$1"
+..
+.
+.
+.\" End of command synopsis.  Restores adjustment.
+.de YS
+.  in \\n(mIu
+.  ad \\n(mA
+.  hy \\n(HY
+.  nr mS 0
+..
+.
+.
+.\" Declare optional option.
+.de OP
+.  ie \\n(.$-1 \
+.    RI "[\fB\\$1\fP" "\ \\$2" "]"
+.  el \
+.    RB "[" "\\$1" "]"
+..
+.
+.
+.\" Start example.
+.de EX
+.  nr mE \\n(.f
+.  nf
+.  nh
+.  ft CW
+..
+.
+.
+.\" End example.
+.de EE
+.  ft \\n(mE
+.  fi
+.  hy \\n(HY
+..
+.TH vzubc 8 "2 May 2013" "OpenVZ" "Containers"
+.SH NAME
+vzubc \- show User Beancounters in a human-readable format
+.SH SYNOPSIS
+vzubc [\fIoption\fR ...] [\fICTID\fR ...]
+.SH DESCRIPTION
+This utility aims to show current values for User Beancounter in
+a human-readable format. Values that are in pages are converted into bytes,
+then long values are converted into kilo-, mega- gigabytes etc.
+For held and maxheld, it shows how close the values are to the barrier and
+to the limit. Zero and unlimited values are shown as \fB-\fR.
+
+One or several \fICTID\fRs can be specified to limit the output to the given
+containers. Each \fICTID\fR can be either a name or a numeric ID. Note that
+names can only be used if there is a container on the system with that name
+(\fBvzlist -o ctid\fI name\fR command is used for name to ID conversion).
+Unknown \fICTID\fRs are ignored.
+
+The utility can also be used from inside the container, in this case it only
+shows the values for that container (and it doesn't make sense to specify
+\fICTID\fR argument).
+.SH OPTIONS
+.TP
+.BR -w , \ --watch
+Watch mode: run itself under \fBwatch\fR(1), redisplaying the output
+every 2 seconds (by default) until interrupted by Ctrl-C.
+.TP
+.B -wd
+Make \fBwatch\fR(1) highlight the differences between current and previous
+output. Corresponds to \fBwatch -d\fR option.
+.TP
+.B -wt
+Instruct \fBwatch\fR(1) to not show its title (interval, command, and
+current time at the top of the display, as well as the following blank
+line). Corresponds to \fBwatch -t\fR option.
+.TP
+.BI -wn \ time
+Refresh interval for \fBwatch\fR(1), in seconds (corresponds to \fBwatch -n \fItime\fR).
+.TP
+.BR -q , \ --quiet
+Quiet mode. In this mode, \fBvzubc\fR only shows beancounters with fails and
+those with held/maxheld values close to limits.
+.BR -v , \ --verbose
+Verbose mode. In this mode, \fBvzubc\fR also shows beancounters with
+barrier set to \fBunlimited\fR (those are hidden by default).
+.TP
+.BI -qh \ ratio
+Quiet threshold for held to limit ratio. Default is \fB0.5\fR (50%).
+.TP
+.BI -qm \ ratio
+Quiet threshold for maxheld to limit ratio. Default is \fB0.8\fR (80%).
+.TP
+.BR -r , \ --relative
+Relative mode: for fail counters, instead of showing the absolute value,
+calculate the difference from the previous run. This mode is denoted by
+a \fB+\fR sign before the \fBFAIL\fR column header.
+.TP
+.BI -rd \ dir
+Set a directory for saving fail counters to \fIdir\fR (default is
+\fB/tmp/vzubc.store\fR).
+.TP
+.B -rc
+Clear all saved fail counter data.
+.TP
+.BR -i , \ --incremental
+Incremental mode. Shows an additional column with a difference in held
+value from the previous run. This option also affects quiet mode: all
+lines with changed held values are shown. Held data is saved to the same
+directory as fail counter data.
+.TP
+.BI -id \ dir
+A synonym for \fB-rd\fR.
+.TP
+.B -ic
+Clear all saved held data.
+.TP
+.BR -c , \ --color
+Enable color highlighting. Not compatible with \fB--watch\fR. Same thresholds
+as for quiet mode are used to highlight "more important" lines, plus the
+lines with non-zero fail counters are highlighted.
+.TP
+\fB-f\fR | \fB--file\fR \fIfilename\fR
+Read User Beancounters from \fIfilename\fR. By default this is
+\fB/proc/bc/resources\fR or, if that one is not available,
+\fB/proc/user_beancounters\fR. Use \fB-\fR to read from standard input.
+.SH EXAMPLES
+.TP
+.B vzubc 101 web dns
+Show all beancounters for CTID 101 and for CTs named \fBweb\fR and \fBdns\fR.
+.TP
+.B vzubc -w -wd -wn 10 101
+Display beancounters for CT 101 every 10 seconds, highlighting the changes.
+Interrupt with Control-C.
+.TP
+.B vzubc -q -c
+Show beancounters with held or maxheld close to limits, plus those with
+non-zero fail counters, with colors.
+.TP
+.B vzubc -q -qh 0.8 -qm 1
+Show beancounters with held value equal to or more than 80% of a limit,
+and/or with maxheld value equal or more than a limit, plus those with
+non-zero fail counters.
+.TP
+.B vzubc -w -q -r
+Display beancounters with held and maxheld close to limits, plus those with
+increasing fail counters.
+.TP
+.B vzubc -r -q -qh 2 -qm 2
+Only show beancounters with increased (since the last run) fail counters.
+.TP
+.B vzubc -rc -ic
+Show all beancounters, and clear all saved data for relative and incremental
+mode (i.e. saved values for fail counter and held).
+.SH FILES
+.EX
+/proc/bc/resources
+/proc/user_beancounters
+/tmp/vzubc.store/ubc.*
+.EE
+.SH EXIT STATUS
+Returns 0 upon successful execution, 1 otherwise.
+.SH SEE ALSO
+.BR watch (1),
+.BR vzlist (8),
+.BR vzmemcheck (8),
+.BR vzcfgvalidate (8),
+.BR http://wiki.openvz.org/UBC .
+.SH LICENSE
+Copyright (C) 2011, Parallels, Inc. Licensed under GNU GPL.

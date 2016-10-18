@@ -1,0 +1,843 @@
+.\" Stolen from groff's an-ext.tmac as of 2012-Mar-05
+.nr mS 0
+.
+.
+.\" Declare start of command synopsis.  Sets up hanging indentation.
+.de SY
+.  ie !\\n(mS \{\
+.    nh
+.    nr mS 1
+.    nr mA \\n(.j
+.    ad l
+.    nr mI \\n(.i
+.  \}
+.  el \{\
+.    br
+.    ns
+.  \}
+.
+.  nr mT \w'\fB\\$1\fP\ '
+.  HP \\n(mTu
+.  B "\\$1"
+..
+.
+.
+.\" End of command synopsis.  Restores adjustment.
+.de YS
+.  in \\n(mIu
+.  ad \\n(mA
+.  hy \\n(HY
+.  nr mS 0
+..
+.
+.
+.\" Declare optional option.
+.de OP
+.  ie \\n(.$-1 \
+.    RI "[\fB\\$1\fP" "\ \\$2" "]"
+.  el \
+.    RB "[" "\\$1" "]"
+..
+.
+.
+.\" Start example.
+.de EX
+.  nr mE \\n(.f
+.  nf
+.  nh
+.  ft CW
+..
+.
+.
+.\" End example.
+.de EE
+.  ft \\n(mE
+.  fi
+.  hy \\n(HY
+..
+.
+.de SS3
+.vs 2v
+.sp \\n[PD]u
+.ft \\*[HF]
+.ps \\n[PS-SS]u
+.in \\n[SN]u
+.ne (2v + 1u)
+.if \\n[.$] \&\\$*
+.P
+..
+.
+.TH ploop 8 "4 December 2013" "OpenVZ" "Containers"
+.SH NAME
+ploop \- ploop device management utility
+.SH SYNOPSYS
+.SY ploop\ init
+.B -s
+.I size
+.OP -f format
+.OP -v version
+.OP -t fstype
+.OP -b blocksize
+.OP -B fsblocksize
+.I delta_file
+.YS
+.SY ploop\ mount
+.OP -r
+.OP -F
+.OP -f format
+.OP -b blocksize
+.OP -d device
+.OP -m mount_point
+.OP -o mount_options
+.OP -t fstype
+.I base_delta
+.RI [ .\|.\|.
+.IR top_delta ]
+.YS
+.SY ploop\ mount
+.OP -r
+.OP -F
+.OP -d device
+.OP -m mount_point
+.OP -o mount_options
+.OP -t fstype
+.OP -u uuid\fR | \fBbase\fR
+.\" .OP -c component
+.I DiskDescriptor.xml
+.YS
+.SY ploop\ umount
+{
+.B -d
+.I device
+|
+.B -m
+.I mount_point
+|
+.I DiskDescriptor.xml
+|
+.I image_file
+}
+.YS
+.SY ploop\ resize
+.B -s
+.I size
+.I DiskDescriptor.xml
+.YS
+.SY ploop\ convert
+{
+.B -f
+.I format
+|
+.B -v
+.I version
+}
+.I DiskDescriptor.xml
+.YS
+.SY ploop\ check
+.OP --force
+.OP --hard-force
+.OP --check
+.OP --ro
+.OP --silent
+.OP --drop-inuse
+.OP --raw
+.OP --blocksize \fIsize\fR
+.OP --repair-sparse
+.I DiskDescriptor.xml
+|
+.I image_file
+.YS
+.SY ploop\ info
+.OP -s
+.I DiskDescriptor.xml
+.YS
+.SY ploop\ list
+.OP -a
+.YS
+.SY ploop\ snapshot
+.OP -u uuid
+.I DiskDescriptor.xml
+.YS
+.SY ploop\ snapshot-merge
+.OP -u uuid\fR\ |\ \fB-A
+.I DiskDescriptor.xml
+.YS
+.SY ploop\ snapshot-switch
+.B -u
+.I uuid
+.I DiskDescriptor.xml
+.YS
+.SY ploop\ snapshot-delete
+.B -u
+.I uuid
+.I DiskDescriptor.xml
+.YS
+.SY ploop\ snapshot-list
+.OP -H
+.OP -u uuid
+.OP -o field\fR[,\fIfield\fR...]
+.I DiskDescriptor.xml
+.YS
+.SY ploop\ copy
+.B -s
+.I device
+.OP -F stop_command
+.OP -d file
+.YS
+.SY ploop\ copy
+.B -d
+.I file
+.YS
+.SY ploop\ balloon\ discard
+.OP --automount
+.OP --to-free size
+.OP --min-block min_size
+.I DiskDescriptor.xml
+.YS
+
+.SH DESCRIPTION
+
+ploop is a kernel block device, similar to the traditional loop device
+(which is controlled by \fBlosetup\fR(8))
+but with more features added, such as dynamic disk space allocation,
+stackable images, online resize, snapshotting, and live migration helper
+(write tracker). This manual page describes the ploop user space tool
+which is used to perform various operations related to ploop devices
+and images.
+
+Note that this ploop tool is not aware of container entities. Commands that
+have \fBDiskDescriptor.xml\fR as an argument work with an XML file
+that contains meta-information about a particular ploop device
+configuration: device characteristics (block size etc.),
+storage information (names and formats of images used for the device),
+snapshot information, etc. If a particular command can be used both
+with and without the DiskDescriptor.xml argument, it is strongly advised
+to use the form with DiskDescriptor.xml.
+
+.SH OPTIONS
+
+Run
+.B ploop
+without any options to show a short synopsys, including a list of commands.
+
+Run
+.B ploop
+.I command
+to show synopsys and a short description for a particular \fIcommand\fR.
+
+.SS Basic commands
+
+.SS3 init
+
+Create and initalize a ploop image file and a corresponding
+.B DiskDescriptor.xml
+file.
+
+.SY ploop\ init
+.B -s
+.I size
+.OP -f format
+.OP -v version
+.OP -t fstype
+.OP -b blocksize
+.OP -B fsblocksize
+.I delta_file
+.YS
+
+.IP "\fB-s\fR \fIsize\fR"
+Image size. If no suffix is specified, the \fIsize\fR is in sector units
+(one sector is 512 bytes). One can specify optional \fBK\fR, \fBM\fR,
+\fBG\fR or \fBT\fR suffix to set the size in kilo-, mega-, giga- or terabytes.
+.IP "\fB-f\fR \fIformat\fR"
+Image format. See \fBImage formats\fR below.
+.IP "\fB-v\fR \fIversion\fR"
+Image version, can be \fB1\fR or \fB2\fR. Default is \fB2\fR, if supported
+by the kernel.
+.IP "\fB-t\fR \fBnone\fR|\fBext3\fR|\fBext4\fR"
+File system type to create, default is \fBext4\fR. Unless \fBnone\fR
+is specified, a partition, a filesystem, and a balloon file will be
+created inside the image. Using \fBext3\fR is not recommended.
+.IP "\fB-b\fR \fIblocksize\fR"
+Device block size, in 512 byte sectors. Default block size is 2048 sectors,
+or 1 megabyte.
+.IP "\fB-B\fR \fIfsblocksize\fR"
+Filesystem block size, in bytes. Default is 4096 bytes.
+.IP \fIdelta_file\fR
+Path to a non-existent image file to be created.
+
+.SS3 mount
+
+Assemble a ploop device from one or more delta images, start it,
+and optionally mount the file system residing on the device.
+
+Two forms of this command are provided. The first one accepts
+a list of delta images to be used for assembling the ploop device,
+while the second one is using information from a DiskDescriptor.xml
+file. Please note that not all mount options are applicable to both
+forms.
+
+.SY ploop\ mount
+.OP -r
+.OP -F
+.OP -f format
+.OP -b blocksize
+.OP -d device
+.OP -m mount_point
+.OP -o mount_options
+.OP -t fstype
+.I base_delta
+.RI [ .\|.\|.
+.IR top_delta ]
+.YS
+
+.SY ploop\ mount
+.OP -r
+.OP -F
+.OP -d device
+.OP -m mount_point
+.OP -o mount_options
+.OP -t fstype
+.OP -u uuid\fR | \fBbase\fR
+.\" .OP -c component
+.I DiskDescriptor.xml
+.YS
+
+.IP \fB-r\fR
+Mount as read-only.
+.IP \fB-F\fR
+Run \fBfsck\fR(8) on inner filesystem before mounting it. This option
+is ignored if \fB-m\fR is not used.
+.IP "\fB-f\fR \fIformat\fR"
+Image format.
+Ignored if DiskDescriptor.xml is specified. Otherwise,
+one need to specify \fBraw\fR as an argument, if raw image format is used.
+.IP "\fB-b\fR \fIblocksize\fR"
+Device block size, in 512 byte sectors.
+Ignored if DiskDescriptor.xml is specified. Otherwise,
+required for raw images.
+.IP "\fB-d\fR \fIdevice\fR"
+Ploop device to use, e.g. \fB/dev/ploop0\fR. If not specified,
+a randomly numbered ploop device will be used.
+.IP "\fB-m \fImount_point\fR
+If this option is specified, ploop goes on to mount the file system to
+directory denoted by \fImount_point\fR.
+.IP "\fB-o\fR \fImount_options\fR"
+Any additional mount options, comma-separated. Used if \fB-m\fR is set.
+.IP "\fB-t\fR \fIfstype\fR"
+File system type used for mounting. Used if \fB-m\fR is set.
+The default is \fBext4\fR.
+.IP "\fB-u\fR \fIuuid\fR | \fBbase\fR"
+GUID of the image from the DiskDescriptor.xml to be mounted. By
+default, top GUID is used. The special '\fBbase\fR' value can be used
+to mount the base (lower-level) image.
+.\" FIXME describe component name
+.IP "\fIbase_delta\fR [.\|.\|. \fItop_delta\fR]"
+List of image files to mount, with the first one being the base
+delta and the last one being the top delta (i.e. the one that
+will be writable unless \fB-r\fR is specified).
+.IP "\fIDiskDescriptor.xml\fR"
+Path to the DiskDescriptor.xml file with information about images.
+
+.SS3 umount
+
+Unmount a ploop device. Since a mounted ploop device consists of
+an image (or multiple images), a device, and (optionally) a file system
+mounted to a directory, one can refer to any of the above entities to
+specify what to unmount. The recommended way is to use DiskDescriptor.xml.
+
+.SY ploop\ umount
+{
+.B -d
+.I device
+|
+.B -m
+.I mount_point
+|
+.I DiskDescriptor.xml
+|
+.I image_file
+}
+.YS
+.IP "\fB-d\fR \fIdevice\fR"
+Ploop device, e.g., \fB/dev/ploop0\fR.
+.IP "\fB-m \fImount_point\fR
+Mount point of a ploop device to unmount.
+.IP \fIDiskDescriptor.xml\fR
+Path to the DiskDescriptor.xml file with information about images.
+.IP \fIimage_file\fR
+Path to a mounted image file.
+
+.SS3 resize
+
+Resize a ploop image. Both online (i.e. when ploop is mounted and used)
+and offline resize is supported, and the tool can
+either grow or shrink both the ploop image and the underlying file system.
+
+.SY ploop\ resize
+.B -s
+.I size
+.I DiskDescriptor.xml
+.YS
+
+.IP "\fB-s\fR \fIsize\fR"
+Image size. If no suffix is specified, \fIsize\fR is in sector units
+(one sector is 512 bytes). One can specify optional \fBK\fR, \fBM\fR,
+\fBG\fR or \fBT\fR suffix to set the size in kilo-, mega-, giga- or terabytes.
+.IP \fIDiskDescriptor.xml\fR
+Path to the DiskDescriptor.xml file with information about images.
+
+.SS3 convert
+
+Convert either ploop image format or version (but not both at the same time).
+Conversion can only be performed offline (i.e. image should not be in use).
+
+.SY ploop\ convert
+{
+.B -f
+.I format
+|
+.B -v
+.I version
+}
+.I DiskDescriptor.xml
+.YS
+.IP "\fB-f\fR \fIformat\fR"
+Image format. See \fBImage formats\fR below.
+.IP "\fB-v\fR \fIversion\fR"
+Image version, can be \fB1\fR or \fB2\fR.
+
+.SS3 check
+
+Check the internal consistency of (and possibly repair) a ploop image
+(or images). Note that image(s) to be tested should not be in use.
+If
+.I DiskDescriptor.xml
+is supplied, all the images one by one are checked.
+
+.SY ploop\ check
+.OP --force
+.OP --hard-force
+.OP --check
+.OP --ro
+.OP --silent
+.OP --drop-inuse
+.OP --raw
+.OP --blocksize \fIsize\fR
+.OP --repair-sparse
+.I DiskDescriptor.xml
+|
+.I image_file
+.YS
+
+.IP "\fB-f\fR, \fB--force\fR"
+Force check even if image's dirty flag is not set.
+.IP "\fB-F\fR, \fB--hard-force\fR"
+Same as \fB-f\fR, plus try to fix even fatal errors (can be dangerous).
+.IP "\fB-c\fR, \fB--check\fR"
+Check for duplicated blocks and holes.
+.IP "\fB-r\fR, \fB--ro\fR"
+Read-only access, do not modify image(s).
+.IP "\fB-s\fR, \fB--silent\fR"
+Be more silent, only report errors.
+.IP "\fB-d\fR, \fB--drop-inuse\fR"
+Drop image "in use" flag.
+.IP "\fB-R\fR, \fB--raw\fR"
+Specifies that
+.I image_file
+is a raw ploop image.
+.IP "\fB-b\fR, \fB--blocksize\fR \fIsize\fR"
+Image cluster block size, in sectors (for raw images).
+.IP "\fB-S\fR, \fB--repair-sparse\fR"
+Repair sparse image(s).
+
+.SS Miscellaneous commands
+
+.SS3 info
+
+.SY ploop\ info
+.I DiskDescriptor.xml
+.YS
+Show information about disk space and inodes usage and limits on the
+inner ploop filesystem, somewhat similar to
+.BR vzquota (8)
+.B stat
+or
+.B show
+commands.
+
+.SY ploop\ info
+.B -s
+.I DiskDescriptor.xml
+.YS
+Show information about ploop device size, block size, and format version.
+
+.SS3 list
+
+.SY ploop\ list
+.OP -a
+.YS
+
+Shows a list of running ploop devices (first column) and
+their corresponding base images. With option
+.B -a
+it also shows a mount point (third column).
+
+.SS Working with snapshots
+
+Ploop snapshots is a mechanism for creating and managing instant states of a
+running file system. Creating a snapshot leads to creating a new empty ploop
+image which is layered on top of an old one, then all writes are ending up
+in the top image, and reads are falling through to a lower level. There can be
+up to 126) stacked ploop images (or snapshots). Online snapshot merging is
+also supported.
+
+Snapshots are identified by a unique UUID. A snapshot can be mounted using
+\fBploop mount -u \fIUUID\fR command, see above.
+
+.SS3 snapshot
+
+Create a ploop snapshot.
+
+.SY ploop\ snapshot
+.OP -u uuid
+.I DiskDescriptor.xml
+.YS
+
+.IP "\fB-u\fR \fIuuid\fR"
+Specify a \fIuuid\fR for a new snapshot. If option is not given,
+uuid is generated automatically. To generate uuid manually, one can use
+the \fBuuidgen\fR(1) utility. Note that UUID must be enclosed in
+curly brackets.
+
+.SS3 snapshot-merge
+
+Merge a snapshot with its parent.
+
+.SY ploop\ snapshot-merge
+.OP -u uuid\fR\ |\ \fB-A
+.I DiskDescriptor.xml
+.YS
+
+.IP "\fB-u\fR \fIuuid\fR"
+Specify a snapshot \fIuuid\fR to merge.
+If this option is not specified, the top delta will be used.
+.IP \fB-A\fR
+Merge all snapshots down to base delta. If some snapshots have more than
+a single child, they will be impossible to merge.
+
+.SS3 snapshot-switch
+
+Switch to the specified snapshot. This operation can only be performed while
+ploop is not running (i.e. is unmounted). The current top delta image will be
+removed.
+
+.SY ploop\ snapshot-switch
+.B -u
+.I uuid
+.I DiskDescriptor.xml
+.YS
+
+.IP "\fB-u\fR \fIuuid\fR"
+Specify a snapshot \fIuuid\fR to switch to.
+
+.SS3 snapshot-delete
+
+Delete the specifed snapshot. This operation can only be performed if the
+specified snapshot is not active. In case snapshot doesn't have any
+children, it will simply be removed. In case snapshot has a single child,
+it will be merged to that child. Deleting a snapshot that has multiple children
+is currently not supported (but can be performed manually in an iterative
+fashion).
+
+.SY ploop\ snapshot-delete
+.B -u
+.I uuid
+.I DiskDescriptor.xml
+.YS
+
+.IP "\fB-u\fR \fIuuid\fR"
+Specify a snapshot \fIuuid\fR to be deleted.
+
+.SS3 snapshot-list
+
+List available snapshots.
+
+.SY ploop\ snapshot-list
+.OP -H
+.OP -u uuid
+.OP -o field\fR[,\fIfield\fR...]
+.I DiskDescriptor.xml
+.YS
+
+.IP "\fB-H\fR, \fB--no-header\fR"
+Suppress displaying the header row. Usable for scripts.
+.IP "\fB-u\fR, \fB--uuid\fR, \fB--id\fR \fIuuid\fR"
+Filter the output to a specified \fIuuid\fR.
+.IP "\fB-o\fR, \fB--output\fR \fIfield\fR[,\fIfield\fR...]"
+Display only the specified \fIfield\fRs. Possible fields are:
+.br
+\(bu \fBuuid\fR		- snapshot's UUID;
+.br
+\(bu \fBparent_uuid\fR	- snapshot's parent UUID;
+.br
+\(bu \fBcurrent\fR	- if this snapshot is the current one;
+.br
+\(bu \fBfname\fR	- snapshot image file name.
+
+.SS Image copying
+
+\fBploop copy\fR is a mechanism of effective copying of a top ploop image
+with the help of build-in ploop kernel driver feature called write tracker.
+Write tracker is a feature that lets \fBploop copy\fR to iteratively
+obtain a list of modified image blocks from the kernel. Two \fBploop copy\fR
+processes are required for iterative top delta transfer. These are used by
+.BR vzmigrate(8).
+
+.SS3 copy (sending)
+
+.SY ploop\ copy
+.B -s
+.I device
+.OP -F stop_command
+.OP -d file
+.YS
+
+This command enables the in-kernel write tracker for the specified ploop
+.IR device,
+then sends all the data blocks from the top delta image to stdout
+(supposedly read by destination \fBploop copy\fR) or a \fIfile\fR.
+After that, it iteratively gets the list of the modified data blocks
+from the kernel and sends those blocks again. After a number of iterations
+(or when the list is empty), it executes the \fIstop_command\fR
+(this could be \fBvzctl stop\fR or \fBvzctl chkpnt\fR) and does the last
+iteration of sending the modified data blocks. Finally, it checks that the
+data were not modified, error is returned otherwise.
+
+.SS3 copy (receiving)
+
+.SY ploop\ copy
+.B -d
+.I file
+.YS
+
+Reads the data block (provided by the source \fBploop copy\fR)
+from the \fBstdin\fR and writes them to the \fIfile\fR.
+
+.SS Ballooning
+
+Since there is no online shrink support in \fBext4\fR file system, ploop
+internally uses a technique called "ballooning" as a work around to shrink
+its images.
+
+Ballooning operation consists of inflating a special balloon file
+(invisible for ordinary users), loading fiemap info of the inflated
+balloon to the kernel, relocating blocks of the image file
+from the tail to the space specified by fiemap info, and truncating
+the tail of the image file. Result is the image file of a smaller size.
+
+However, it is quite possible that inflated balloon file will only span
+blocks that were never touched before. Those will look like "not allocated"
+space from the kernel ploop point of view. In this case nothing will be
+relocated and nothing truncated.
+
+So, if balloon operation succeeded, it's only guaranteed that a user
+of ploop device won't be able to consume more space than the initial
+block device size minus the size of the inflated balloon.
+On the other hand, if a user of block device used a lot of space on it,
+then freed the significant part of used space, balloon operation
+will result in significant truncate of image file.
+
+All the ploop ballooning logic is hidden from the end user, so while
+a number of low-level commands exist for working with ploop ballooning,
+those are not needed and therefore are not documented here, except for
+a single command.
+
+.SS3 balloon discard
+
+In a situation when a lot of disk space were freed on an in-ploop
+filesystem, use \fBploop balloon discard\fR to optimize the ploop
+image size.
+
+.SY ploop\ balloon\ discard
+.OP --automount
+.OP --to-free size
+.OP --min-block min_size
+.I DiskDescriptor.xml
+.YS
+
+Iteratively try to relocate and discard unused blocks from a ploop image,
+reducing its size.
+
+Note that ploop device and its inner file system should be mounted.
+If not, one can use
+.B --automount
+option to automatically mount ploop for the duration of the operation.
+
+Option \fB--to-free\fR can be used to specify a maximum disk space to
+be freed. In other words, stop the process once freed space exceeded
+requested \fIsize\fR. Default is 0, meaning to try to free as much
+space as possible.
+
+Option \fB--min-block\fR can be used to specify a minimum size of
+an extent to free. The smallest possible extent is 1 cluster
+(currently 1 MB), one can specify higher value to speed up the
+whole discarding operation.
+
+Note that the same functionality is available by means of \fBvzctl compact\fR
+command.
+
+.SS Image formats
+The following image formats are currently supported.
+.TP
+.B raw
+Raw format, with 1:1 mapping between the image file and the ploop device.
+.TP
+.BR ploop1 ,\  expanded
+Expanded format. The image will grow according to the needs of the underlying
+file system. This format is the default.
+Names '\fBploop1\fR' and '\fBexpanded\fR' are aliases.
+.TP
+.B preallocated
+This is the same as '\fBploop1\fR' or '\fBexpanded\fR', the only difference is
+all the file blocks are allocated during creation.
+
+.SH EXIT STATUS
+.B ploop
+exits with status 0 in case of successful execution. Any status greater
+than 0 signifies an error.
+.TP
+.BR 1 ,\  SYSEXIT_CREAT
+Error creating a file.
+.TP
+.BR 2 ,\  SYSEXIT_DEVICE
+Error getting or opening a ploop device.
+.TP
+.BR 3 ,\  SYSEXIT_DEVIOC
+Error doing
+.BR ioctl (2)
+on ploop device.
+.TP
+.BR 4 ,\  SYSEXIT_OPEN
+Error opening a file.
+.TP
+.BR 5 ,\  SYSEXIT_MALLOC
+Not enough memory (error from
+.BR malloc (3),
+.BR realloc (3),
+.BR calloc (3),
+or
+.BR posix_memalign (3)).
+.TP
+.BR 6 ,\  SYSEXIT_READ
+Error during read.
+.TP
+.BR 7 ,\  SYSEXIT_WRITE
+Error during write.
+.TP
+.BR 9 ,\  SYSEXIT_SYSFS
+Error reading from a sysfs file (usually under \fB/sys/block/ploop...\fR).
+.TP
+.BR 11 ,\  SYSEXIT_PLOOPFMT
+Corrupted ploop image detected.
+.TP
+.BR 12 ,\  SYSEXIT_SYS
+Other system error.
+.TP
+.BR 13 ,\  SYSEXIT_PROTOCOL
+Broken protocol (unexpected value received).
+.TP
+.BR 14 ,\  SYSEXIT_LOOP
+.B pcopy
+command can't finalize copying (frozen filesystem is changing).
+.TP
+.BR 15 ,\  SYSEXIT_FSTAT
+Error from
+.BR stat (2),
+.BR fstat (2),
+or
+.BR statfs (2).
+.TP
+.BR 16 ,\  SYSEXIT_FSYNC
+Error from
+.BR fsync (2)
+or
+.BR syncfs (2).
+.TP
+.BR 17 ,\  SYSEXIT_EBUSY
+Can't continue, another operation is in progress.
+.TP
+.BR 18 ,\  SYSEXIT_FLOCK
+Error from
+.BR flock (2).
+.TP
+.BR 19 ,\  SYSEXIT_FTRUNCATE
+Error from
+.BR ftruncate (2)
+or
+.BR truncate (2).
+.TP
+.BR 20 ,\  SYSEXIT_FALLOCATE
+Error from
+.BR fallocate (2).
+.TP
+.BR 21 ,\  SYSEXIT_MOUNT
+Can't mount ploop image or file system.
+.TP
+.BR 22 ,\  SYSEXIT_UMOUNT
+Can't unmount ploop image or file system.
+.TP
+.BR 23 ,\  SYSEXIT_LOCK
+Locking failed (another operation in progress?).
+.TP
+.BR 24 ,\  SYSEXIT_MKFS
+Can't create file system.
+.TP
+.BR 26 ,\  SYSEXIT_RESIZE_FS
+Utility
+.B resizefs
+failed.
+.TP
+.BR 27 ,\  SYSEXIT_MKDIR
+Error from
+.BR mkdir (2).
+.TP
+.BR 28 ,\  SYSEXIT_RENAME
+Error from
+.BR rename (2).
+.TP
+.BR 29 ,\  SYSEXIT_ABORT
+Operation aborted.
+.TP
+.BR 30 ,\  SYSEXIT_RELOC
+Block relocation failed.
+.TP
+.BR 33 ,\  SYSEXIT_CHANGE_GPT
+Error resizing GPT partition table.
+.TP
+.BR 35 ,\  SYSEXIT_UNLINK
+Error from
+.BR unlink (2).
+.TP
+.BR 36 ,\  SYSEXIT_MKNOD
+Error from
+.BR mknod (2).
+.TP
+.BR 37 ,\  SYSEXIT_PLOOPINUSE
+Image is already in use.
+.TP
+.BR 38 ,\  SYSEXIT_PARAM
+Invalid parameter.
+.TP
+.BR 39 ,\  SYSEXIT_DISKDESCR
+Problem with DiskDescriptor.xml file.
+.TP
+.BR 40 ,\  SYSEXIT_DEV_NOT_MOUNTED
+Ploop image is not mounted.
+.TP
+.BR 41 ,\  SYSEXIT_FSCK
+Error from
+.BR fsck (8).
+.SH SEE ALSO
+.BR vzctl (8),
+.BR vzmigrate (8),
+.BR http://openvz.org/Ploop .

@@ -1,0 +1,108 @@
+.\" Stolen from groff's an-ext.tmac as of 2012-Mar-05
+.nr mS 0
+.
+.
+.\" Declare start of command synopsis.  Sets up hanging indentation.
+.de SY
+.  ie !\\n(mS \{\
+.    nh
+.    nr mS 1
+.    nr mA \\n(.j
+.    ad l
+.    nr mI \\n(.i
+.  \}
+.  el \{\
+.    br
+.    ns
+.  \}
+.
+.  nr mT \w'\fB\\$1\fP\ '
+.  HP \\n(mTu
+.  B "\\$1"
+..
+.
+.
+.\" End of command synopsis.  Restores adjustment.
+.de YS
+.  in \\n(mIu
+.  ad \\n(mA
+.  hy \\n(HY
+.  nr mS 0
+..
+.
+.
+.\" Declare optional option.
+.de OP
+.  ie \\n(.$-1 \
+.    RI "[\fB\\$1\fP" "\ \\$2" "]"
+.  el \
+.    RB "[" "\\$1" "]"
+..
+.
+.
+.\" Start example.
+.de EX
+.  nr mE \\n(.f
+.  nf
+.  nh
+.  ft CW
+..
+.
+.
+.\" End example.
+.de EE
+.  ft \\n(mE
+.  fi
+.  hy \\n(HY
+..
+.TH vzsplit 8 "18 Mar 2012" "OpenVZ" "Containers"
+.SH NAME
+vzsplit \- generate a sample container configuration file
+.SH SYNOPSIS
+.SY vzsplit
+.OP -n numve
+.OP -f conf_name
+.OP -s swapsize
+.RB [ -v\ yes | no ]
+.YS
+.SH DESCRIPTION
+The \fBvzsplit\fR utility is used to split the Hardware Node into equal parts.
+It generates a full set of system resource control parameters for the
+given number of containers. The values are calculated from
+the total physical memory of the Hardware Node the utility runs on, and
+the number of containers the Hardware Node shall be able
+to run even if the given number of containers consume all
+the resources available.
+.P
+Without any option given, \fBvzsplit\fR prompts for the desired number
+of containers and outputs the resulting resource control
+parameters to stdout.
+.P
+If there are not enough system resources to run the specified number of
+containers, an appropriate message is shown and the sample configuration file
+is not generated.
+.SH OPTIONS
+.TP
+.BI -n \ numve
+Specify the number of containers.
+.TP
+.BI -f \ conf_name
+Specify the configuration sample name to write configuration to, instead of
+standard output. The file created will be named
+/etc/vz/conf/ve-\fIconf_name\fR.conf-sample.
+.TP
+.BI -s \ swapsize
+Specify the swap size in Kbytes. If this option is not given,
+the swap size is read from \fB/proc/meminfo\fR.
+.TP
+.BR -v\ yes | no
+Whether to generate VSwap enabled configuration. Default is auto-detect by
+checking if running kernel is VSwap capable; this option overrides
+auto-detection.
+.SH EXIT STATUS
+\fBvzsplit\fR returns 0 upon a successful execution. If anything goes wrong, it
+returns 1.
+.SH SEE ALSO
+.BR ctid.conf (5).
+.SH LICENSE
+Copyright (C) 2000-2011, Parallels, Inc. Licensed under GNU GPL.

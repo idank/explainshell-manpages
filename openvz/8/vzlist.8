@@ -1,0 +1,171 @@
+.\" Stolen from groff's an-ext.tmac as of 2012-Mar-05
+.nr mS 0
+.
+.
+.\" Declare start of command synopsis.  Sets up hanging indentation.
+.de SY
+.  ie !\\n(mS \{\
+.    nh
+.    nr mS 1
+.    nr mA \\n(.j
+.    ad l
+.    nr mI \\n(.i
+.  \}
+.  el \{\
+.    br
+.    ns
+.  \}
+.
+.  nr mT \w'\fB\\$1\fP\ '
+.  HP \\n(mTu
+.  B "\\$1"
+..
+.
+.
+.\" End of command synopsis.  Restores adjustment.
+.de YS
+.  in \\n(mIu
+.  ad \\n(mA
+.  hy \\n(HY
+.  nr mS 0
+..
+.
+.
+.\" Declare optional option.
+.de OP
+.  ie \\n(.$-1 \
+.    RI "[\fB\\$1\fP" "\ \\$2" "]"
+.  el \
+.    RB "[" "\\$1" "]"
+..
+.
+.
+.\" Start example.
+.de EX
+.  nr mE \\n(.f
+.  nf
+.  nh
+.  ft CW
+..
+.
+.
+.\" End example.
+.de EE
+.  ft \\n(mE
+.  fi
+.  hy \\n(HY
+..
+.TH vzlist 8 "13 Jun 2012" "OpenVZ" "Containers"
+.SH NAME
+vzlist \- show various information about containers
+.SH SYNOPSIS
+.SY vzlist
+[\fB-a\fR | \fB-S\fR]
+.OP -n
+.OP -H
+.OP -t
+.OP -j
+.OP -o "name\fR[,\fIname\fR...] | \fB-1\fR"
+.OP -s \fR[\fB-\fR]\fIname
+.OP -h pattern
+.OP -N pattern
+.OP -d pattern
+[\fICTID\fR [\fICTID\fR ...]]
+.SY vzlist
+\fB-L\fR | \fB--list\fR
+.SY vzlist
+.B --help
+.YS
+.SH DESCRIPTION
+This utility is used for listing containers and their parameters.
+By default only running containers are listed.
+If one or more \fICTID\fRs are specified, only specified containers are
+displayed.
+.PP
+For some fields that can have long values (e.g. \fBip\fR, \fBhostname\fR,
+\fBdescription\fR or \fBfeatures\fR), the value string is trimmed to some
+predefined width (in order not to break the columned layout), unless this
+field is the last one. So, in order to get the full non-trimmed value for
+such a field, put the field name last in the list of fields for
+\fB-o\fR option. If using \fBvzlist\fR from a script, add \fB-t\fR
+to disable trimming.
+.SH OPTIONS
+.IP "\fB-a\fR, \fB--all\fR"
+List all containers.
+.IP "\fB-S\fR, \fB--stopped\fR"
+List only not running containers (including the ones with status shown as
+\fBmounted\fR or \fBsuspended\fR).
+.IP "\fB-n\fR, \fB--name\fR"
+Display container names instead of hostnames.
+.IP "\fB-H\fR, \fB--no-header\fR"
+Suppress displaying the header row. Usable for scripts.
+.IP "\fB-t\fR, \fB--no-trim\fR"
+Suppress trimming long fields. Usable for scripts.
+.IP "\fB-j\fR, \fB--json\fR"
+Output in JSON format. By default, all possible fields are printed.
+.IP "\fB-o\fR, \fB--output\fR \fIfield\fR[,\fIfield\fR...]"
+Display only the specified \fIfield\fRs (see \fBPossible fields\fR
+subsection below).
+.IP \fB-1\fR
+Synonym for \fB-H -octid\fR, i.e. only show container IDs, one per line.
+.IP "\fB-s\fR, \fB--sort\fR [\fB-\fR]\fIfield\fR"
+Sort by the value of \fIfield\fR (possible arguments are the same
+as for \fB-o\fR). The \fB-\fR before the field name means sorting
+in the reverse order.
+
+.SS Output filters
+
+List of CTs can be further filtered using the following options.
+For patterns one can use the same wildcards as in shell
+(i.e. \fB*\fR, \fB?\fR, and \fB[]\fR).
+Note: to avoid expansion of wildcards by the shell, one have to escape
+the pattern by either putting it into single quotes (like \fB'a*a'\fR)
+or by adding a backslash before the wildcard character (like \fBa\\*a\fR).
+.IP "\fB-h\fR, \fB--hostname\fR \fIpattern\fR"
+List only containers whose hostnames matches the \fIpattern\fR.
+.IP "\fB-N\fR, \fB--name_filter\fR \fIpattern\fR"
+List only containers whose names matches the \fIpattern\fR.
+.IP "\fB-d\fR, \fB--description\fR \fIpattern\fR"
+List only containers with descriptions matching the \fIpattern\fR.
+
+.SS Possible fields
+
+.IP "\fB-L\fR, \fB--list\fR"
+list all available format specifiers that can be used for
+both output (\fB-o\fR, \fB--output\fR) and the sorting order
+(\fB-s\fR, \fB--sort\fR).
+.P
+For the user beancounter fields, if suffix is not specified, current usage
+(a.k.a. "held") value is show. One can also use the following suffixes:
+.TP
+.B .m
+maxheld
+.TP
+.B .b
+barrier
+.TP
+.B .l
+limit
+.TP
+.B .f
+fail counter
+.PP
+For the disk quota fields, if suffix is not specified, current usage
+is shown. One can also use the following suffixes:
+.TP
+.B .s
+soft limit
+.TP
+.B .h
+hard limit
+.P
+Note that for JSON output suffixes are not allowed.
+.SH EXAMPLES
+.TP
+.B vzlist -o ctid,kmemsize,kmemsize.l -s kmemsize
+Show CTIDs, kmemsize usage, and kmemsize limit for all running containers,
+sorted by the kmemsize usage.
+.SH EXIT STATUS
+Returns 0 upon success.
+.SH COPYRIGHT
+Copyright (C) 2000-2011, Parallels, Inc. Licensed under GNU GPL.

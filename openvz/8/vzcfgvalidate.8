@@ -1,0 +1,95 @@
+.\" Stolen from groff's an-ext.tmac as of 2012-Mar-05
+.nr mS 0
+.
+.
+.\" Declare start of command synopsis.  Sets up hanging indentation.
+.de SY
+.  ie !\\n(mS \{\
+.    nh
+.    nr mS 1
+.    nr mA \\n(.j
+.    ad l
+.    nr mI \\n(.i
+.  \}
+.  el \{\
+.    br
+.    ns
+.  \}
+.
+.  nr mT \w'\fB\\$1\fP\ '
+.  HP \\n(mTu
+.  B "\\$1"
+..
+.
+.
+.\" End of command synopsis.  Restores adjustment.
+.de YS
+.  in \\n(mIu
+.  ad \\n(mA
+.  hy \\n(HY
+.  nr mS 0
+..
+.
+.
+.\" Declare optional option.
+.de OP
+.  ie \\n(.$-1 \
+.    RI "[\fB\\$1\fP" "\ \\$2" "]"
+.  el \
+.    RB "[" "\\$1" "]"
+..
+.
+.
+.\" Start example.
+.de EX
+.  nr mE \\n(.f
+.  nf
+.  nh
+.  ft CW
+..
+.
+.
+.\" End example.
+.de EE
+.  ft \\n(mE
+.  fi
+.  hy \\n(HY
+..
+.TH vzcfgvalidate 8 "18 Mar 2012" "OpenVZ" "Containers"
+.SH NAME
+vzcfgvalidate \- validate a container configuration file
+.SH SYNOPSIS
+.SY vzcfgvalidate
+.OP -r
+.OP -i
+.RB [ -v\ yes | no ]
+.I configfile
+.YS
+.SH DESCRIPTION
+This utility checks validity of resource control parameters in a container
+configuration file \fIconfigfile\fR. Some of the User Beancounter
+parameters have interdependencies, and if those are not met, configuration
+is inconsistent. The utility finds and reports such inconsistencies.
+
+There are three severity levels in the output: Error, Warning,
+and Recommendation.
+.SH OPTIONS
+.TP
+.B \-r
+Repair mode (corrects \fIconfigfile\fR).
+.TP
+.B \-i
+Interactive repair mode.
+.TP
+.BR -v\ yes | no
+Whether to treat \fIconfigfile\fR as VSwap enabled configuration.
+Default is auto-detect by checking if physpages.limit is not set to unlimited;
+this option overrides the auto-detection.
+.SH EXIT STATUS
+Normally, exit status is 0. On program execution error, exit status is 1.
+If the validation fails, exit status is 2.
+.SH SEE ALSO
+.BR ctid.conf (5),
+.BR http://wiki.openvz.org/UBC_consistency_check .
+.SH LICENSE
+Copyright (C) 2000-2011, Parallels, Inc. Licensed under GNU GPL.

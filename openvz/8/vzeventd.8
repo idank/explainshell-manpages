@@ -1,0 +1,112 @@
+.\" Stolen from groff's an-ext.tmac as of 2012-Mar-05
+.nr mS 0
+.
+.
+.\" Declare start of command synopsis.  Sets up hanging indentation.
+.de SY
+.  ie !\\n(mS \{\
+.    nh
+.    nr mS 1
+.    nr mA \\n(.j
+.    ad l
+.    nr mI \\n(.i
+.  \}
+.  el \{\
+.    br
+.    ns
+.  \}
+.
+.  nr mT \w'\fB\\$1\fP\ '
+.  HP \\n(mTu
+.  B "\\$1"
+..
+.
+.
+.\" End of command synopsis.  Restores adjustment.
+.de YS
+.  in \\n(mIu
+.  ad \\n(mA
+.  hy \\n(HY
+.  nr mS 0
+..
+.
+.
+.\" Declare optional option.
+.de OP
+.  ie \\n(.$-1 \
+.    RI "[\fB\\$1\fP" "\ \\$2" "]"
+.  el \
+.    RB "[" "\\$1" "]"
+..
+.
+.
+.\" Start example.
+.de EX
+.  nr mE \\n(.f
+.  nf
+.  nh
+.  ft CW
+..
+.
+.
+.\" End example.
+.de EE
+.  ft \\n(mE
+.  fi
+.  hy \\n(HY
+..
+.TH vzeventd 8 "14 Jan 2013" "OpenVZ" "Containers"
+.SH NAME
+vzeventd \- the OpenVZ events daemon.
+.SH SYNOPSIS
+.SY vzeventd
+.OP \-v
+.OP \-d
+.YS
+.SY vzeventd
+.B \-h
+.YS
+.SH DESCRIPTION
+This daemon takes care of events sent by the OpenVZ kernel
+(via a netlink socket) and performs required actions associated with
+those events, by running specific scripts. Every event received contains
+a container ID, which is passed to the script as \fBVEID\fR environment
+variable.
+.P
+Current list of known events and associated \fBvzeventd\fR actions are:
+.TP
+.B start
+Ignore.
+.TP
+.B stop
+Run /usr/libexec/vzctl/scripts/vzevent-stop. This script takes care of removing
+ARP and routing records for the given CT from CT0.
+.TP
+.B mount
+Ignore.
+.TP
+.B umount
+Ignore.
+.TP
+.B reboot
+Run /usr/libexec/vzctl/scripts/vzevent-reboot. This script takes care of
+rebooting a given CT.
+.SH OPTIONS
+.TP
+.B \-v
+Increase verbosity (can be used multiple times).
+.TP
+.B \-d
+Debug mode (do not daemonize, run in foreground).
+.TP
+.B -h
+Display help and exit.
+.SH EXIT STATUS
+Returns 0 upon success.
+.SH LICENSE
+Copyright (C) 2010-2013, Parallels, Inc. Licensed under GNU GPL.
+.SH AUTHOR
+.PP
+This manual page was initially written by Thorsten Schifferdecker
+<tsd@debian.systs.org>
+for the \fBDebian GNU/Linux\fP system (but may be used by others).

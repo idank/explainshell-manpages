@@ -1,0 +1,88 @@
+.\" Stolen from groff's an-ext.tmac as of 2012-Mar-05
+.nr mS 0
+.
+.
+.\" Declare start of command synopsis.  Sets up hanging indentation.
+.de SY
+.  ie !\\n(mS \{\
+.    nh
+.    nr mS 1
+.    nr mA \\n(.j
+.    ad l
+.    nr mI \\n(.i
+.  \}
+.  el \{\
+.    br
+.    ns
+.  \}
+.
+.  nr mT \w'\fB\\$1\fP\ '
+.  HP \\n(mTu
+.  B "\\$1"
+..
+.
+.
+.\" End of command synopsis.  Restores adjustment.
+.de YS
+.  in \\n(mIu
+.  ad \\n(mA
+.  hy \\n(HY
+.  nr mS 0
+..
+.
+.
+.\" Declare optional option.
+.de OP
+.  ie \\n(.$-1 \
+.    RI "[\fB\\$1\fP" "\ \\$2" "]"
+.  el \
+.    RB "[" "\\$1" "]"
+..
+.
+.
+.\" Start example.
+.de EX
+.  nr mE \\n(.f
+.  nf
+.  nh
+.  ft CW
+..
+.
+.
+.\" End example.
+.de EE
+.  ft \\n(mE
+.  fi
+.  hy \\n(HY
+..
+.TH vzdqcheck 8 "6 Jun 2011" "Virtuozzo/OpenVZ" "Containers"
+.SH NAME
+vzdqcheck \- count disk usage
+.SH SYNOPSIS
+.SY vzdqcheck
+[\fIoption\fP ...] \fIpath\fP
+.YS
+.SH DESCRIPTION
+\fBvzdqcheck\fP scans all the files under the \fIpath\fP, using the same
+code as \fBvzquota init\fR, and reports disk usage (in 1 KB blocks and inodes).
+.SH OPTIONS
+.TP
+.B -h
+Print usage information.
+.TP
+.B -V
+Print utility version.
+.TP
+.B -q
+Quiet mode. Causes all warning and diagnostic messages to be suppressed.
+Only fatal errors are displayed.
+.TP
+.B -v
+Verbose mode. Causes the utility to print debugging messages about its
+progress. Multiple \fB-v\fP options increase verbosity. Maximum is 2.
+
+.SH SEE ALSO
+.BR vzquota (8).
+
+.SH COPYRIGHT
+Copyright (C) 2000-2011, Parallels, Inc. Licensed under GNU GPL.

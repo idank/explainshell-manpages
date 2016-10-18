@@ -1,0 +1,94 @@
+.\" Stolen from groff's an-ext.tmac as of 2012-Mar-05
+.nr mS 0
+.
+.
+.\" Declare start of command synopsis.  Sets up hanging indentation.
+.de SY
+.  ie !\\n(mS \{\
+.    nh
+.    nr mS 1
+.    nr mA \\n(.j
+.    ad l
+.    nr mI \\n(.i
+.  \}
+.  el \{\
+.    br
+.    ns
+.  \}
+.
+.  nr mT \w'\fB\\$1\fP\ '
+.  HP \\n(mTu
+.  B "\\$1"
+..
+.
+.
+.\" End of command synopsis.  Restores adjustment.
+.de YS
+.  in \\n(mIu
+.  ad \\n(mA
+.  hy \\n(HY
+.  nr mS 0
+..
+.
+.
+.\" Declare optional option.
+.de OP
+.  ie \\n(.$-1 \
+.    RI "[\fB\\$1\fP" "\ \\$2" "]"
+.  el \
+.    RB "[" "\\$1" "]"
+..
+.
+.
+.\" Start example.
+.de EX
+.  nr mE \\n(.f
+.  nf
+.  nh
+.  ft CW
+..
+.
+.
+.\" End example.
+.de EE
+.  ft \\n(mE
+.  fi
+.  hy \\n(HY
+..
+.TH vzmemcheck 8 "18 Mar 2012" "OpenVZ" "Containers"
+.SH NAME
+vzmemcheck \- show information about host memory parameters
+.SH SYNOPSIS
+.SY vzmemcheck
+.OP -v
+.OP -A
+.YS
+.SH DESCRIPTION
+This utility shows host system memory parameters:
+.nf
+.B \(bu low memory utilization;
+.B \(bu low memory commitment;
+.B \(bu RAM utilization;
+.B \(bu mem+swap utilization;
+.B \(bu mem+swap commitment;
+.B \(bu allocmem utilization;
+.B \(bu allocmem commitment;
+.B \(bu allocmem limit.
+.fi
+.SH OPTIONS
+.TP
+.B -v
+Display information for each container.
+.TP
+.B -A
+Display absolute values (in megabytes). In this mode, the last
+two lines are the numerator and the denominator of the corresponding
+field.
+.SH EXIT STATUS
+Normally, exit status is 0. On error, exit status is 1.
+.SH SEE ALSO
+.BR vzcfgvalidate (8),
+.BR vzubc (8),
+.BR http://wiki.openvz.org/UBC_systemwide_configuration .
+.SH LICENSE
+Copyright (C) 2000-2011, Parallels, Inc. Licensed under GNU GPL.

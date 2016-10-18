@@ -1,0 +1,132 @@
+.\" Stolen from groff's an-ext.tmac as of 2012-Mar-05
+.nr mS 0
+.
+.
+.\" Declare start of command synopsis.  Sets up hanging indentation.
+.de SY
+.  ie !\\n(mS \{\
+.    nh
+.    nr mS 1
+.    nr mA \\n(.j
+.    ad l
+.    nr mI \\n(.i
+.  \}
+.  el \{\
+.    br
+.    ns
+.  \}
+.
+.  nr mT \w'\fB\\$1\fP\ '
+.  HP \\n(mTu
+.  B "\\$1"
+..
+.
+.
+.\" End of command synopsis.  Restores adjustment.
+.de YS
+.  in \\n(mIu
+.  ad \\n(mA
+.  hy \\n(HY
+.  nr mS 0
+..
+.
+.
+.\" Declare optional option.
+.de OP
+.  ie \\n(.$-1 \
+.    RI "[\fB\\$1\fP" "\ \\$2" "]"
+.  el \
+.    RB "[" "\\$1" "]"
+..
+.
+.
+.\" Start example.
+.de EX
+.  nr mE \\n(.f
+.  nf
+.  nh
+.  ft CW
+..
+.
+.
+.\" End example.
+.de EE
+.  ft \\n(mE
+.  fi
+.  hy \\n(HY
+..
+.TH vzcptcheck 8 "5 Mar 2013" "OpenVZ" "Containers"
+.SH NAME
+vzcptcheck \- show/test CPT properties
+.SH SYNOPSIS
+.SY vzcptcheck
+.I property
+.OP argument ...
+.SY vzcptcheck
+.B help
+.YS
+.SH DESCRIPTION
+This low-level utility is used by
+.BR vzmigrate (8)
+to check if a container can be succesfully restored on a destination system
+before performing live migration. Currently, it is able to check CPT version
+and CPU flags compatibility.
+.P
+There are two modes of operation: to show a property and to test a
+property. Showing mode is invoked if a property specified with no arguments;
+testing mode requires one or many arguments after a property name.
+Generally, one runs
+.B vzcptcheck
+on one node to get a property, and on the other node to check for the
+property.
+.P
+Note that this utility does not guarantee that migration will succeed
+even if all tests are passed. It merely gives a way to prevent migration
+which will definitely fail.
+.SH OPTIONS
+.SY vzcptcheck
+.B version
+.SY vzcptcheck
+.B version
+.I num
+.YS
+To get CPT version number, run \fBvzcptcheck version\fR on the source node.
+Then, to check if this version number is supported, run
+\fBvzcptcheck version \fInum\fR on the destination node.
+.SY vzcptcheck
+.B caps
+.SY vzcptcheck
+.B caps
+.I ctid
+.I capnum
+.YS
+To get CPU capabilities number, run \fBvzcptcheck caps\fR on the destination
+node. Then, to check if a CT can be migrated to node with such a CPU, run
+\fBvzcptcheck caps \fIctid capnum\fR on the source node.
+.SH EXIT STATUS
+In showing mode, returns \fB0\fR upon success, or \fB1\fR in case of an error.
+.P
+In testing mode, returns \fB0\fR if migration is possible (test passed),
+\fB1\fR in case of an error, or \fB2\fR if migration is not possible
+(test failed).
+.SH EXAMPLES
+To check if a CT 123 can be migrated to $DEST, run the following commands
+on the source node. Note that error checking is omitted for brevity.
+.P
+.EX
+   VEID=123
+   VERSION=$(vzcptcheck version)
+   echo Got CPT version: $VERSION
+   ssh root@$DEST vzcptcheck version $VERSION
+   echo Version check result: $?
+   CAPS=$(ssh root@$DEST vzcptcheck caps)
+   echo Got caps: $CAPS
+   vzcptcheck caps $VEID $CAPS
+   echo Caps check result: $?
+.EE
+.P
+If both tests pass, you should get 0 as a result for both checks.
+.SH SEE ALSO
+.BR vzmigrate (8).
+.SH LICENSE
+Copyright (C) 2013, Parallels, Inc. Licensed under GNU GPL v2.

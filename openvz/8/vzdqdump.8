@@ -1,0 +1,134 @@
+.\" Stolen from groff's an-ext.tmac as of 2012-Mar-05
+.nr mS 0
+.
+.
+.\" Declare start of command synopsis.  Sets up hanging indentation.
+.de SY
+.  ie !\\n(mS \{\
+.    nh
+.    nr mS 1
+.    nr mA \\n(.j
+.    ad l
+.    nr mI \\n(.i
+.  \}
+.  el \{\
+.    br
+.    ns
+.  \}
+.
+.  nr mT \w'\fB\\$1\fP\ '
+.  HP \\n(mTu
+.  B "\\$1"
+..
+.
+.
+.\" End of command synopsis.  Restores adjustment.
+.de YS
+.  in \\n(mIu
+.  ad \\n(mA
+.  hy \\n(HY
+.  nr mS 0
+..
+.
+.
+.\" Declare optional option.
+.de OP
+.  ie \\n(.$-1 \
+.    RI "[\fB\\$1\fP" "\ \\$2" "]"
+.  el \
+.    RB "[" "\\$1" "]"
+..
+.
+.
+.\" Start example.
+.de EX
+.  nr mE \\n(.f
+.  nf
+.  nh
+.  ft CW
+..
+.
+.
+.\" End example.
+.de EE
+.  ft \\n(mE
+.  fi
+.  hy \\n(HY
+..
+.TH vzdqdump 8 "11 Sep 2012" "Virtuozzo/OpenVZ" "Containers"
+
+.SH NAME
+vzdqdump, vzdqload \- dump, load user/group quotas
+.SH SYNOPSIS
+.SY vzdqdump
+[\fIgeneral_options\fP] \fIquota_id\fP
+.OP -f
+.OP -c quota_file
+.OP -G
+.OP -U
+.OP -T
+.OP -F
+.SY vzdqload
+[\fIgeneral_options\fP] \fIquota_id\fP
+.OP -c quota_file
+.OP -G
+.OP -U
+.OP -T
+.OP -F
+.YS
+
+.SH DESCRIPTION
+\fBvzdqdump\fP dumps user/group quota information obtained either
+from a quota file or the kernel to stdout.
+.PP
+\fBvzdqload\fP loads user/group quota information provided by
+\fBvzdqdump\fP from stdin into quota file. Quota must be stopped at load.
+
+The \fIquota_id\fP must be numeric-only identifier. Note that quota ID is
+not the same as container ID (CTID). One container can mount several
+filesystems and each of them can have its own quotas.
+
+.SH OPTIONS
+.SS General
+.TP
+.B -h
+Print usage information.
+.TP
+.B -V
+Print utility version.
+.TP
+.B -q
+Quiet mode. Causes all warning and diagnostic messages to be suppressed.
+Only fatal errors are displayed.
+.TP
+.B -v
+Verbose mode. Causes the utilities to print debugging messages about their
+progress. Multiple \fB-v\fP options increase verbosity. Maximum is 2.
+.SS Parameters
+.TP
+.B -f
+Dump user/group quota information from kernel rather than quota file.
+.TP
+.BI -c \ quota_file
+Specifies quota file to process.
+.TP
+.BR -G ,\  --grace
+Dump (load) user/group grace times.
+.TP
+.BR -U ,\  --limits
+Dump (load) disk limits of users/groups.
+.TP
+.BR -T ,\  --exptimes
+Dump (load) expiration times of users/groups.
+.TP
+.BR -F ,\ --first
+Dump (load) first level quota.
+
+.SH EXIT STATUS
+See \fBvzquota\fP(8).
+
+.SH SEE ALSO
+.BR vzquota (8).
+
+.SH COPYRIGHT
+Copyright (C) 2000-2012, Parallels, Inc. Licensed under GNU GPL.

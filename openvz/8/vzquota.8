@@ -1,0 +1,366 @@
+.\" Stolen from groff's an-ext.tmac as of 2012-Mar-05
+.nr mS 0
+.
+.
+.\" Declare start of command synopsis.  Sets up hanging indentation.
+.de SY
+.  ie !\\n(mS \{\
+.    nh
+.    nr mS 1
+.    nr mA \\n(.j
+.    ad l
+.    nr mI \\n(.i
+.  \}
+.  el \{\
+.    br
+.    ns
+.  \}
+.
+.  nr mT \w'\fB\\$1\fP\ '
+.  HP \\n(mTu
+.  B "\\$1"
+..
+.
+.
+.\" End of command synopsis.  Restores adjustment.
+.de YS
+.  in \\n(mIu
+.  ad \\n(mA
+.  hy \\n(HY
+.  nr mS 0
+..
+.
+.
+.\" Declare optional option.
+.de OP
+.  ie \\n(.$-1 \
+.    RI "[\fB\\$1\fP" "\ \\$2" "]"
+.  el \
+.    RB "[" "\\$1" "]"
+..
+.
+.
+.\" Start example.
+.de EX
+.  nr mE \\n(.f
+.  nf
+.  nh
+.  ft CW
+..
+.
+.
+.\" End example.
+.de EE
+.  ft \\n(mE
+.  fi
+.  hy \\n(HY
+..
+.TH vzquota 8 "27 Jun 2011" "Virtuozzo/OpenVZ" "Containers"
+.SH NAME
+vzquota \- manipulate containers disk quotas
+.SH SYNOPSIS
+.\" .TP
+\fBvzquota\fP [\fIquota_options\fP] \fIcommand quota_id\fR [\fIcommand_options\fP]
+.\" Commented out: either we'll provide syntax for all commands, or no
+.\" commands at all. --kir.
+.\" .TP
+.\" \fBvzquota setlimit2\fP \fIquota_id\fP \fB-t\fR [\fB-u\fR|\fB-g\fR] \fIblock-exptime\fR \fIinode-exptime\fP
+.\" .TP
+.\" \fBvzquota setlimit2\fP \fIquota_id\fP [\fB-u\fR|\fB-g\fR] \fIugid\fP \fIblock-softlimit block-hardlimit inode-softlimit inode-hardlimit\fP
+.SH DESCRIPTION
+\fBvzquota\fP controls disk quotas for Virtuozzo/OpenVZ container.
+These are per-container disk quotas set from Virtuozzo/OpenVZ host system.
+
+The \fIcommand\fR can be one of the following:
+\fBinit\fP, \fBdrop\fP, \fBon\fP, \fBoff\fP, \fBsetlimit\fP, \fBsetlimit2\fP,
+\fBreload2\fR, \fBstat\fP, \fBshow\fP.
+
+The \fIquota_id\fP must be numeric-only identifier. Note, that quota ID is not
+the same as container ID (CTID). One container can mount several filesystems
+and each of them can have its own quotas.
+.SH OPTIONS
+
+.SS General
+
+.TP
+.B -h
+Print usage information.
+.TP
+.B -V
+Print utility version.
+.TP
+.B -q
+Quiet mode. Causes all warning and diagnostic messages to be suppressed.
+Only fatal errors are displayed.
+.TP
+.B -v
+Verbose mode. Causes \fBvzquota\fR to print debugging messages about its
+progress. Multiple \fB-v\fP options increase verbosity. Maximum is 2.
+.TP
+.B -b
+Batch mode. in this mode outputs (usually on \fBstat\fP and \fBshow\fP
+commands) will be in format better suitable for parsing by a script.
+
+.SS Quota Commands
+
+The following commands are available:
+.TP
+.B init
+A necessary preliminary for any other quota command work: create a new
+quota file, calculating current disk usage from given path.
+This command requires full set of quota soft- and hardlimits given
+as command-line options. Limits are also stored in quota file, so
+subsequent \fBvzquota on\fP doesn't requires any quota limit as
+command-line parameter, although accepts them as well. New specified
+limits and flags will also be stored in the quota file.
+
+You can also create your own quota files for arbitrary quota accounting points.
+Quota file location and path to quota accounting point can be specified via
+\fB-c\fP and \fB-p\fP options (see below). You can use also \fB-R\fP option
+instead of \fB-c\fP option, to set relative quota file location. In this case
+quota file resides one dirrectory upper than quota accounting point and has
+special name (see below).
+.TP
+.B drop
+Remove quota file. Command checks if quota is running and refuses to remove
+file in this case, option \fB-f\fP allows to override that rule.
+.TP
+.B on
+Turn quota on. If previous quota session wasn't switched off properly
+(quota is not running, but quota file indicates it is),
+initialization procedure will be performed. \fB-f\fP option allow to force
+initialization procedure regardless of the shutdown status. Command \fBon\fP
+doesn't work in case specified quota id is running.
+.TP
+.B off
+Turn quota off, write usage statistic back to the quota file. Doesn't work
+if quota file cannot be accessed, also accepts \fB-f\fP option
+(force switching off, even if usage statistic will be lost). This is possible
+that quota will still be in a stopped state, even if \fB-f\fP flag is used.
+.TP
+.B setlimit
+Set new quota parameters. Requires at least one quota parameter or flag
+specified. Applies new parameters immediately if quota with given quota_id
+is running. Stores new limits and flags in the quota file. Option \fB-f\fP
+specifies to mark quota as dirty, so at the next quota start, disk
+will be rescanned and usage updated.
+.TP
+.B setlimit2
+Set second-level quota parameters. Applies new parameters immediately
+if quota with given quota_id is running and second-level quota is
+on. Stores new limits in the quota file.
+.TP
+.B reload2
+Reload second-level quota limits from quota file for given quota_id.
+.TP
+.B stat
+Show usage statistics and update it in quota file. Option \fB-f\fP causes to
+do not read and update quota file, just print statistics from kernel.
+Option \fB-t\fP specifies to show and update user/group based quota statistics
+for a container. Works on running containers only. The command with \fB-t\fP
+option flushes all quota statistics from kernel to file and thus may be used for
+backup purposes.
+.TP
+.B show
+Show usage and limits info from quota file. Option \fB-t\fP specifies to show
+user/group quota information as well.
+
+.SS Setting quota limits
+
+All these options are required in \fBinit\fP command, and optionally
+accepted in \fBon\fP and \fBsetlimit\fP commands.
+.TP
+.BR \-s ,\  --sub\-quotas\ 1 | 0
+Enables or disables user/group based quota inside the container. Here \fB1\fP
+means to enable, and \fB0\fP - to disable.
+By default user/group quota is disabled. This option is accepted by
+\fBinit\fP, \fBon\fP and \fBsetlimit\fR commands.
+.TP
+.BI \-u\  user_id
+For \fBsetlimit2\fP command only. Limits will be applied to the specified
+\fIuser_id\fP.
+.TP
+.BI \-g\  group_id
+For \fBsetlimit2\fP command only. Limits will be applied to the specified
+\fIgroup_id\fP.
+.TP
+\fB\-u\fR, \fB--ugid\-limit\fP \fIlimit\fP
+For \fBon\fP and \fBsetlimit\fP commands only.
+Specifies maximum number of user and group IDs allowed in the container.
+If the value is \fB0\fP, user/group quota will not be accounted.
+Default value is \fI0\fP. There is one note concerning \fBsetlimit\fP command.
+If first-level quota is running, second-level quota is active
+and not all ugid objects were loaded into kernel by \fBon\fP command due to
+insufficient \fIugid_limit\fP value (this can be checked by issuing
+\fBstat -t\fP command and observing whether ugid limit was exceeded),
+then \fBsetlimit\fP with new \fIlimit\fP value updates it in kernel and
+file but this change does not take immediate effect. Modification will be
+applied after quota restart.
+.TP
+\fB\-b\fR, \fB--block\-softlimit\fP \fIbsl\fP
+Disk quota block soft limit.
+Soft limit is amount of blocks which excess is allowed in time equal
+\fIexptime\fP.
+On the expiration of this time soft limit becomes hard limit.
+Block limits are set in 1k sized blocks.
+.TP
+\fB\-B\fR, \fB--block\-hardlimit\fP \fIbhl\fP
+Disk quota block hard limit. Hard limit is amount of blocks which excess is not
+allowed.
+.TP
+\fB\-e\fR, \fB--block\-exptime\fP \fIbet\fP
+Disk quota expiration time for excess of a block soft limit.
+Time can be given in two different formats:
+.br
+1. \fIdd:hh:mm:ss\fP
+.br
+For instance: \fI30\fP - 30 seconds; \fI12:00\fP - 12 minutes; \fI20:15:11:00\fP - 20 days, 15 hours, 11 minutes
+.br
+2. \fIxxA\fP, where \fIA\fR - h/H(hour); d/D(day); w/W(week); m/M(month);
+y/Y(year).
+.br
+For instance: \fI7D\fP - 7 days; \fI01w\fP - 1 week; \fI3m\fP - 3 months
+.TP
+\fB\-i\fR, \fB--inode\-softlimit\fP \fIisl\fP
+Disk quota inode soft limit. Similarly to block soft limit.
+.TP
+\fB\-I\fR, \fB--inode\-hardlimit\fP \fIihl\fP
+Disk quota inode hard limit.
+.TP
+\fB\-n\fR, \fB--inode\-exptime\fP \fIiet\fP
+Disk quota expiration time for excess of a inode soft limit.
+
+.SS Other options
+.TP
+.BI \-p\  path
+Point of quota accounting for given \fIquota_id\fP. This option required for
+\fBinit\fP command and can be used also with any another command to override
+quota path obtained from quota file. For \fBon\fP and \fBsetlimit\fP commands,
+this option can be used to set and save new quota accounting path for given
+\fIquota_id\fP
+.TP
+.B \-R
+Set special relative path to \fIquota_file\fR. If this option is specified,
+quota file location will depends on path to quota accounting dir: if your quota
+accounting path is /path/to/\fIsomewhere\fR/ than quota file will be
+/path/to/quota.\fIsomewhere\fR. If this option is not specified, quota file
+location is /var/vzquota/quota.\fIquota_id\fP. All commands accept this
+option.
+.TP
+.BI \-c\  quota_file
+This option allows to specify a \fIquota_file\fR to work with.
+All commands accept this option. If this option is not specified, default
+file location depends on whether \fB-R\fP option is specified or not
+(see above).
+.TP
+.B \-f
+Force option. Accepted by \fBdrop\fP, \fBon\fP, \fBoff\fP, \fBstat\fP,
+\fBsetlimit\fP and \fBsetlimit2\fR commands. Action of this option differs
+for different commands and is described above for each command separately.
+.TP
+.B \-t
+For \fBstat\fP and \fBshow\fP commands only. Processes user/group quota
+statistics. Specifies whether to show (update in file) user/group
+quota information.
+.TP
+.B \-t
+For \fBsetlimit2\fP command. Set second-level quota time grace parameters.
+.SH LIMITATIONS
+It is impossible to start or stop quota accounting if the directory
+given by \fB-p\fP option is busy. This is rather limitation of kernel
+part of disk quota implementation.
+.SH DISPLAY
+\fBvzquota stat\fP and \fBvzquota show\fP display the following information:
+.TP
+.B resource
+Either 1k-blocks or inodes.
+.TP
+.B usage
+Current usage of resource.
+.TP
+.B softlimit
+Resource limit. Current usage can exceed this limit up to hard limit during grace time.
+.TP
+.B hardlimit
+Resource limit. Current usage can't exceed this limit.
+.TP
+.B grace
+During this amount of time usage can exceed softlimit. If
+a soft limit has not been exceeded the grace column is blank. If the grace
+period has expired, the grace column contain special \fBnone\fP value.
+.PP
+In case option \fB\-t\fP is specified, the following information is
+also displayed:
+.TP
+.B User/group quota:
+Status of the 2nd level quota. This can be \fBon\fR or \fBoff\fR,
+\fBactive\fR or \fBinactive\fR. Values \fBon\fR/\fBoff\fR define the state
+of the 2nd level quota at the next start of container quota.
+Values \fBactive\fR/\fBinactive\fR indicate the current state
+of the 2nd level quota in the kernel.
+.TP
+.B Ugids:
+Three values are shown: \fIloaded\fP, \fItotal\fP and \fIlimit\fP.
+\fIloaded\fP is the number of records (uids or gids) in the kernel.
+\fItotal\fP is the number of unique records located in the kernel
+and quota file.
+\fIlimit\fP is the current kernel limit of records amount.
+Note that \fIloaded\fP and \fItotal\fP may be greater then \fIlimit\fP.
+.TP
+.B Ugid limit was exceeded:
+Can be \fByes\fR or \fBno\fR. \fByes\fP indicates that vzquota did not loaded
+all records into the kernel. In this case you should reduce the number
+of unique records (remove files which belong to unnecessary users)
+or increase the ugid limit. After that you should restart quota.
+.TP
+.B User/group grace times and quotafile flags:
+Grace times and quota file flags (internal parameters of standard linux kernel
+quota v.3).
+
+.SH EXIT STATUS
+.TP
+.B 0
+Command executed successfully
+.TP
+.B 1
+System error
+.TP
+.B 2
+Usage error
+.TP
+.B 3
+Virtuozzo syscall error
+.TP
+.B 4
+Quota file error
+.TP
+.B 5
+Quota is already running
+.TP
+.B 6
+Quota is not running
+.TP
+.B 7
+Can not get lock on this quota id
+.TP
+.B 8
+Directory tree crosses mount points
+.TP
+.B 9
+Quota is running but user/group quota is inactive; this status is returned by
+\fBstat -t\fP command for information purposes and does not indicate a error
+.TP
+.B 10
+Quota is marked as dirty in file; this status is returned by
+\fBshow\fP command for information purposes and does not indicate a error
+.TP
+.B 11
+Quota file does not exist
+.TP
+.B 12
+Internal error
+.TP
+.B 13
+Can't obtain mount point
+.SH COPYRIGHT
+Copyright (C) 2000-2011, Parallels, Inc. Licensed under GNU GPL.

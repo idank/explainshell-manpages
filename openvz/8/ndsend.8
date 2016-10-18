@@ -1,0 +1,101 @@
+.\" Stolen from groff's an-ext.tmac as of 2012-Mar-05
+.nr mS 0
+.
+.
+.\" Declare start of command synopsis.  Sets up hanging indentation.
+.de SY
+.  ie !\\n(mS \{\
+.    nh
+.    nr mS 1
+.    nr mA \\n(.j
+.    ad l
+.    nr mI \\n(.i
+.  \}
+.  el \{\
+.    br
+.    ns
+.  \}
+.
+.  nr mT \w'\fB\\$1\fP\ '
+.  HP \\n(mTu
+.  B "\\$1"
+..
+.
+.
+.\" End of command synopsis.  Restores adjustment.
+.de YS
+.  in \\n(mIu
+.  ad \\n(mA
+.  hy \\n(HY
+.  nr mS 0
+..
+.
+.
+.\" Declare optional option.
+.de OP
+.  ie \\n(.$-1 \
+.    RI "[\fB\\$1\fP" "\ \\$2" "]"
+.  el \
+.    RB "[" "\\$1" "]"
+..
+.
+.
+.\" Start example.
+.de EX
+.  nr mE \\n(.f
+.  nf
+.  nh
+.  ft CW
+..
+.
+.
+.\" End example.
+.de EE
+.  ft \\n(mE
+.  fi
+.  hy \\n(HY
+..
+.TH ndsend 8 "18 Mar 2012" "OpenVZ" "Containers"
+.SH NAME
+ndsend \- send a Neighbor Advertisement NDP packet
+.SH SYNOPSIS
+.SY ndsend
+.I address interface
+.YS
+.SH DESCRIPTION
+The \fBndsend\fR utility is called by \fBarpsend\fR(8) for IPv6 addresses
+to send an unsolicited Neighbor Advertisement ICMPv6 multicast packet
+announcing a given IPv6 address to all IPv6 nodes as per RFC4861.
+.SH OPTIONS
+.TP
+.I address
+Specify the IPv6 address to be advertised.
+.TP
+.I interface
+Specify the network interface to send an advertisement from.
+.SH EXIT STATUS
+\fBndsend\fR returns 0 upon successful execution. If something goes wrong, it
+returns an appropriate error code:
+.TP
+.B 1  EXC_USAGE
+Usage error
+.TP
+.B 2  EXC_SYSTEM
+System error
+.SH EXAMPLES
+To send a Neighbor Advertisement ICMPv6 on interface \fBeth0\fR with IPv6
+address \fB2001:DB8::1\fR:
+.PP
+.EX
+   ndsend 2001:DB8::1 eth0
+.EE
+.SH SEE ALSO
+.BR arpsend (8),
+.BR vzctl (8).
+.SH LICENSE
+Copyright (C) 2000-2011, Parallels, Inc. Licensed under GNU GPL.
+.SH "AUTHOR"
+.PP
+This manual page was initially written by Thorsten Schifferdecker
+<tsd@debian.systs.org>
+for the \fBDebian GNU/Linux\fP system (but may be used by others).

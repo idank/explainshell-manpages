@@ -1,0 +1,107 @@
+.\" Stolen from groff's an-ext.tmac as of 2012-Mar-05
+.nr mS 0
+.
+.
+.\" Declare start of command synopsis.  Sets up hanging indentation.
+.de SY
+.  ie !\\n(mS \{\
+.    nh
+.    nr mS 1
+.    nr mA \\n(.j
+.    ad l
+.    nr mI \\n(.i
+.  \}
+.  el \{\
+.    br
+.    ns
+.  \}
+.
+.  nr mT \w'\fB\\$1\fP\ '
+.  HP \\n(mTu
+.  B "\\$1"
+..
+.
+.
+.\" End of command synopsis.  Restores adjustment.
+.de YS
+.  in \\n(mIu
+.  ad \\n(mA
+.  hy \\n(HY
+.  nr mS 0
+..
+.
+.
+.\" Declare optional option.
+.de OP
+.  ie \\n(.$-1 \
+.    RI "[\fB\\$1\fP" "\ \\$2" "]"
+.  el \
+.    RB "[" "\\$1" "]"
+..
+.
+.
+.\" Start example.
+.de EX
+.  nr mE \\n(.f
+.  nf
+.  nh
+.  ft CW
+..
+.
+.
+.\" End example.
+.de EE
+.  ft \\n(mE
+.  fi
+.  hy \\n(HY
+..
+.TH vzcalc 8 "18 Mar 2012" "OpenVZ" "Containers"
+.SH NAME
+vzcalc \- calculate resource usage of a container
+.SH SYNOPSIS
+.SY vzcalc
+.OP -v
+.B CTID
+.YS
+.SH DESCRIPTION
+This utility displays the share of the host system resources a particular
+container is using. If the container is running, the current usage is
+displayed. High utilization values (>100%) mean the system is overloaded
+(or the container has an invalid configuration).
+.TP
+.B Current
+Shows the amount of the resources consumed by the container at a given time.
+.TP
+.B Promised
+Shows the resources soft limit values "promised" for a given container.
+.TP
+.B Max
+Shows the resources hard limit values "promised" for a given container.
+.P
+If the \fB-v\fR option is specified, the following additional information
+is also displayed:
+.TP
+.B Low Mem
+The part of memory residing at lower addresses and directly accessed
+by the kernel (only makes sense for 32-bit architectures).
+.TP
+.B Total RAM
+Total memory.
+.TP
+.B Mem+Swap
+Amount of memory available for applications (both RAM and swap space).
+.TP
+.B Alloc Mem
+Standard memory allocations made for applications in a container.
+This is a more "virtual" system resource than RAM or RAM and swap.
+.TP
+.B Num. Proc
+Number of processes.
+.SH OPTIONS
+.TP
+.B -v
+Display additional information.
+.SH EXIT STATUS
+Normally, the exit status is 0. On error, the exit status is 1.
+.SH LICENSE
+Copyright (C) 2000-2009, Parallels, Inc. Licensed under GNU GPL.

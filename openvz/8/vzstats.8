@@ -1,0 +1,159 @@
+.\" Stolen from groff's an-ext.tmac as of 2012-Mar-05
+.nr mS 0
+.
+.
+.\" Declare start of command synopsis.  Sets up hanging indentation.
+.de SY
+.  ie !\\n(mS \{\
+.    nh
+.    nr mS 1
+.    nr mA \\n(.j
+.    ad l
+.    nr mI \\n(.i
+.  \}
+.  el \{\
+.    br
+.    ns
+.  \}
+.
+.  nr mT \w'\fB\\$1\fP\ '
+.  HP \\n(mTu
+.  B "\\$1"
+..
+.
+.
+.\" End of command synopsis.  Restores adjustment.
+.de YS
+.  in \\n(mIu
+.  ad \\n(mA
+.  hy \\n(HY
+.  nr mS 0
+..
+.
+.
+.\" Declare optional option.
+.de OP
+.  ie \\n(.$-1 \
+.    RI "[\fB\\$1\fP" "\ \\$2" "]"
+.  el \
+.    RB "[" "\\$1" "]"
+..
+.
+.
+.\" Start example.
+.de EX
+.  nr mE \\n(.f
+.  nf
+.  nh
+.  ft CW
+..
+.
+.
+.\" End example.
+.de EE
+.  ft \\n(mE
+.  fi
+.  hy \\n(HY
+..
+.\" Stolen from groff's an-ext.tmac as of 2012-Mar-05
+.
+.\" Older versions don't have these macros defined, so let us put them
+.\" here in order to not break formatting on older distros.
+.
+.\" Start example.
+.de EX
+.  nr mE \\n(.f
+.  nf
+.  nh
+.  ft CW
+..
+.
+.
+.\" End example.
+.de EE
+.  ft \\n(mE
+.  fi
+.  hy \\n(HY
+..
+.
+.TH vzctl 8 "11 May 2013" "OpenVZ" "Containers"
+.SH NAME
+vzstats \- report OpenVZ usage statistics
+.SH SYNOPSIS
+.B vzstats
+.br
+.BR vzstats\ --view | --status
+.br
+.BR vzstats\ --enable | --disable
+.br
+.BR vzstats\ --help
+.SH DESCRIPTION
+Utility \fBvzstats\fR, installed on an OpenVZ server, periodically collects
+some usage statistics and sends it to the OpenVZ stats server,
+.BR http://stats.openvz.org ,
+for processing and analysis. Aggregated statistics from all reports are
+available through the web interface.
+.P
+Statistics reported include some basic hardware information (CPU, RAM,
+file system and disk space usage for \fB/vz\fR), software
+information (distribution version, kernel version, OpenVZ software versions),
+and some OpenVZ-specific information (number of containers running/total,
+number of containers using \fBvswap\fR and \fBploop\fR, used OS templates
+etc.). Information submission is anonymous; information that can be used to
+directly identify a particular host (i.e. MAC or IP addresses, hostnames
+etc.) is not being reported.
+.P
+For the server to anonymously identify reports from the same client,
+a unique random ID (UUID v4) is requested from the server during the
+first \fBvzstats\fR run. It is then saved locally and used when sending
+reports.
+.P
+If run without any options and unless disabled, \fBvzstats\fR runs report
+scripts found in \fBREPDIR\fR (defined in \fBvzstats.conf\fR, default is
+\fB@REPDIR@\fR), collects their output and sends it, as a tarball,
+to stats server.
+.SH OPTIONS
+In case any option is provided, no report is being send, instead an action
+denoted by the option is performed.
+.P
+The following options are supported:
+.TP
+.B --view
+Collect but do not send report, giving a user an ability to see what
+exact information would be send.
+.TP
+.B --config
+Output current \fBvzstats\fR configuration, including:
+.br
+\(bu current version number;
+.br
+\(bu status (enabled or disabled);
+.br
+\(bu an URL used to submit reports to;
+.br
+\(bu vzstats UUID;
+.br
+\(bu report scripts directory.
+.TP
+.B --disable
+Disable reporting. This is performed by creating a marker file,
+.BR @ETCDIR@/vzstats-disable .
+\fBvzstats\fR checks this file upon start, and exits if it is present.
+.TP
+.B --enable
+Re-enable reporting.
+.TP
+.B --help
+Show usage.
+.SH FILES
+.EX
+@ETCDIR@/vzstats.conf
+@ETCDIR@/vzstats-disable
+@REPDIR@/*
+.EE
+.SH SEE ALSO
+.BR vzlist (8),
+.BR http://stats.openvz.org/ ,
+.BR http://openvz.org/vzstats .
+.SH LICENSE
+Copyright (C) 2013, Parallels, Inc. Licensed under GNU GPL.

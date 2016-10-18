@@ -1,0 +1,135 @@
+.\" Stolen from groff's an-ext.tmac as of 2012-Mar-05
+.nr mS 0
+.
+.
+.\" Declare start of command synopsis.  Sets up hanging indentation.
+.de SY
+.  ie !\\n(mS \{\
+.    nh
+.    nr mS 1
+.    nr mA \\n(.j
+.    ad l
+.    nr mI \\n(.i
+.  \}
+.  el \{\
+.    br
+.    ns
+.  \}
+.
+.  nr mT \w'\fB\\$1\fP\ '
+.  HP \\n(mTu
+.  B "\\$1"
+..
+.
+.
+.\" End of command synopsis.  Restores adjustment.
+.de YS
+.  in \\n(mIu
+.  ad \\n(mA
+.  hy \\n(HY
+.  nr mS 0
+..
+.
+.
+.\" Declare optional option.
+.de OP
+.  ie \\n(.$-1 \
+.    RI "[\fB\\$1\fP" "\ \\$2" "]"
+.  el \
+.    RB "[" "\\$1" "]"
+..
+.
+.
+.\" Start example.
+.de EX
+.  nr mE \\n(.f
+.  nf
+.  nh
+.  ft CW
+..
+.
+.
+.\" End example.
+.de EE
+.  ft \\n(mE
+.  fi
+.  hy \\n(HY
+..
+.TH arpsend 8 "18 Mar 2012" "OpenVZ" "Containers"
+.SH NAME
+arpsend \- send ARP requests
+.SH SYNOPSIS
+.SY arpsend
+.B -D
+.BI \-e\  target_ip
+[
+.BI \-e\  target_ip \fR\ ...]
+.OP \-c count
+.OP \-w timeout
+.I interface
+.YS
+.SY arpsend
+.B \-U
+.BI \-i\  source_ip
+.OP \-c count
+.OP \-w timeout
+.I interface
+.YS
+.SH DESCRIPTION
+Utility \fBarpsend\fR sends ARP packets on device \fIinterface\fR to detect
+or update neighbours' ARP caches with a given IP.
+.SH COMMANDS
+Run utility with one of the following commands:
+.TP
+.B \-D
+Send broadcast ARP request to detect neighbours with
+\fItarget_ip\fR. You have to specify \fItarget_ip\fR (\fB-e\fR option).
+.TP
+.B \-U
+Send broadcast ARP request to update neighbours' ARP caches with
+\fIsource_ip\fR. You have to specify \fIsource_ip\fR (\fB-i\fR option).
+.SH OPTIONS
+.TP
+.BI \-c\ count
+Number of packets to send. Default is infinity.
+.TP
+.BI \-w\ interval
+Interval between packets, in seconds. Default is 1 second.
+.TP
+.BI \-i\ source_ip_address
+Set source IP address field in ARP packet.
+.TP
+.BI \-e\ target_ip_address
+Set target IP address field in ARP packet. Note that you can specify
+\fB-e\fR option multiple times to detect many IP addresses in one utility call.
+.SH EXIT STATUS
+\fBarpsend\fR returns 0 upon successful execution. If something goes wrong, it
+returns an appropriate error code.
+.IP "1	EXC_USAGE"
+Usage error
+.IP "2	EXC_SYSTEM"
+System error
+.IP "3	EXC_RECV"
+ARP reply was received
+.SH EXAMPLES
+To send request on interface \fBeth0\fR to detect any neighbour
+computers with IP \fB192.168.10.200\fR:
+.PP
+.EX
+   arpsend -D -e 192.168.10.200 eth0\fR
+.EE
+.PP
+To send request on interface \fBeth0\fR to update neighbours'
+ARP caches with IP \fB192.168.10.200\fR:
+.PP
+.EX
+   arpsend -U -i 192.168.10.200 eth0
+.EE
+.SH NOTES
+Interface you use have to be arpable and not be loopback (i.e.
+\fB/sbin/ip link show \fIinterface\fR should show neither \fBNOARP\fR
+nor \fBLOOPBACK\fR flags in interface parameters).
+.SH SEE ALSO
+.BR vzctl (8).
+.SH LICENSE
+Copyright (C) 2000-2011, Parallels, Inc. Licensed under GNU GPL.

@@ -1,0 +1,227 @@
+.\" Stolen from groff's an-ext.tmac as of 2012-Mar-05
+.nr mS 0
+.
+.
+.\" Declare start of command synopsis.  Sets up hanging indentation.
+.de SY
+.  ie !\\n(mS \{\
+.    nh
+.    nr mS 1
+.    nr mA \\n(.j
+.    ad l
+.    nr mI \\n(.i
+.  \}
+.  el \{\
+.    br
+.    ns
+.  \}
+.
+.  nr mT \w'\fB\\$1\fP\ '
+.  HP \\n(mTu
+.  B "\\$1"
+..
+.
+.
+.\" End of command synopsis.  Restores adjustment.
+.de YS
+.  in \\n(mIu
+.  ad \\n(mA
+.  hy \\n(HY
+.  nr mS 0
+..
+.
+.
+.\" Declare optional option.
+.de OP
+.  ie \\n(.$-1 \
+.    RI "[\fB\\$1\fP" "\ \\$2" "]"
+.  el \
+.    RB "[" "\\$1" "]"
+..
+.
+.
+.\" Start example.
+.de EX
+.  nr mE \\n(.f
+.  nf
+.  nh
+.  ft CW
+..
+.
+.
+.\" End example.
+.de EE
+.  ft \\n(mE
+.  fi
+.  hy \\n(HY
+..
+.TH vztmpl-dl 8 "18 Jun 2013" "OpenVZ" "Containers"
+.SH NAME
+vztmpl-dl \- download/list/update OpenVZ templates
+.SH SYNOPSIS
+.SY vztmpl-dl
+[ \fIoption\fR ... ]
+\fItemplate\fR [\fItemplate\fR ...]
+.SY vztmpl-dl
+[ \fIoption\fR ... ]
+.B --update-all
+.SY vztmpl-dl
+.BR --list-local | --list-remote | --list-all | --list-orphans
+.SY vztmpl-dl
+.BR --config | --help
+.YS
+.SH DESCRIPTION
+The main purpose of this utility is to download a precreated container tarballs
+(also known as templates) from the OpenVZ download server. It can be used
+directly from the command line, and is also used by \fBvzctl create\fR.
+
+Usually one or more template names are required, except if one of
+\fB--update-all\fR, \fB--list\fR*, \fB--config\fR or \fB--help\fR
+is used.
+.SH OPTIONS
+.TP
+.B --gpg-check
+Check GPG signatures of downloaded files. By default, GPG check
+is performed if
+.B CHECK_TEMPLATE_SIG
+is set to
+.B yes
+in
+.B \fB/etc/vz/download.conf\fR file,
+.BR gpg (1)
+tool is installed, and the OpenVZ public key is available
+in the gpg keyring. See \fBEXAMPLES\fR section below on how to install
+OpenVZ public key.
+.TP
+.B --no-gpg-check
+Do not check GPG signatures.
+.TP
+.B --ignore-errors
+Keep processing templates from the list and return 0 exit code, even if
+some template failed to download. Without this option, \fBvztmpl-dl\fR
+aborts upon first download failure.
+.TP
+.B --update
+Update (re-download) existing templates.
+.TP
+.B --no-update
+Do not try to update existing templates.
+.TP
+.TP
+.B --quiet
+Be less talkative (currently it only adds --quiet flag to
+.BR wget (1)
+).
+.TP
+.B --no-quiet
+Be more talkative (this can be used to negate the effect of
+.B QUIET=yes
+in
+.BR download.conf.
+.TP
+.B --update-all
+Try to update all templates that are available locally. Note that there is
+no need to specify individual templates. This options implicitly assumes
+.B --update
+and
+.B --ignore-errors
+options.
+.TP
+.B --list-remote
+Output list of templates available for download. This option is also used
+by \fBvzctl\fR(8) bash-completion script to complete \fB--ostemplate\fR
+option arguments.
+.TP
+.B --list-local
+Output list of templates available locally.
+.TP
+.B --list-all
+Output combined list of templates.
+.TP
+.B --list-orphans
+Output list of local templates not available remotely. In trivial scenario
+this will give the list of old templates that are no longer officially
+supported.
+.TP
+.B --config
+Output current configuration. The tool has built-in configuration
+which can be overwritten by options in \fB/etc/vz/download.conf\fR file.
+.TP
+.B --help
+Output help.
+.SH CONFIGURATION
+The tool has a built-in configuration defaults, which can be changed
+by editing \fB/etc/vz/download.conf\fR file. The following parameters
+can be set:
+.TP
+.B UPDATE_TEMPLATE
+Default is \fByes\fR.
+Setting to \fBno\fR has the same effect as using \fB--no-update\fR option.
+.TP
+.B CHECK_TEMPLATE_SIG
+Default is \fBno\fR.
+Setting to \fByes\fR has the same effect as using \fB--gpg-check\fR option.
+.TP
+.B QUIET
+Default is \fBno\fR.
+Setting to \fByes\fR has the same effect as using \fB--quiet\fR option.
+.TP
+.B TMPL_REPO_PREFIX
+URL repo prefix. Default is
+\fBhttp://download.openvz.org/template/precreated\fR.
+Setting this to location of your closest OpenVZ download mirror
+can speed up download. Current list of OpenVZ mirrors is available
+at \fBhttp://openvz.org/Download_mirrors\fR.
+.TP
+.B TEMPLATE_REPOS
+List of URLs to get repositories from. Default is ${TMPL_REPO_PREFIX}.
+More URLs can be added to get access to beta or unsupported templates.
+.SH EXIT STATUS
+Returns 0 upon success, or an appropriate error code in case of an error:
+.IP 1
+Download error
+.IP 2
+Local template file already present, not updating
+.IP 3
+Error in usage (no argument provided)
+.IP 4
+wget binary not found
+.IP 5
+GPG signature check failed
+.SH EXAMPLES
+To add OpenVZ public key to gpg keyring:
+.EX
+  gpg --search-keys security@openvz.org
+.EE
+.P
+.P
+To list all available templates:
+.EX
+  vztmpl-dl --list
+.EE
+.P
+To download (or update) centos-6 templates:
+.EX
+  vztmpl-dl centos-6-x86 centos-6-x86_64
+.EE
+.P
+To use \fByandex.ru\fR mirror (in \fB/etc/vz/download.conf\fR):
+.EX
+  TMPL_REPO_PREFIX="http://mirror.yandex.ru/mirrors/download.openvz.org/template/precreated"
+.EE
+.P
+To enable beta templates (in \fB/etc/vz/download.conf\fR):
+.EX
+  TEMPLATE_REPOS="${TEMPLATE_REPOS} ${TMPL_REPO_PREFIX}/beta/"
+.EE
+.SH FILES
+.EX
+/etc/vz/download.conf
+/vz/template/cache
+.EE
+.SH SEE ALSO
+.BR arpsend (8),
+.BR download.conf (5),
+.BR http://wiki.openvz.org/Package_signatures#Importing_the_public_key .
+.SH LICENSE
+Copyright (C) 2011-2013, Parallels, Inc. Licensed under GNU GPL.

@@ -1,0 +1,1529 @@
+.\" Stolen from groff's an-ext.tmac as of 2012-Mar-05
+.nr mS 0
+.
+.
+.\" Declare start of command synopsis.  Sets up hanging indentation.
+.de SY
+.  ie !\\n(mS \{\
+.    nh
+.    nr mS 1
+.    nr mA \\n(.j
+.    ad l
+.    nr mI \\n(.i
+.  \}
+.  el \{\
+.    br
+.    ns
+.  \}
+.
+.  nr mT \w'\fB\\$1\fP\ '
+.  HP \\n(mTu
+.  B "\\$1"
+..
+.
+.
+.\" End of command synopsis.  Restores adjustment.
+.de YS
+.  in \\n(mIu
+.  ad \\n(mA
+.  hy \\n(HY
+.  nr mS 0
+..
+.
+.
+.\" Declare optional option.
+.de OP
+.  ie \\n(.$-1 \
+.    RI "[\fB\\$1\fP" "\ \\$2" "]"
+.  el \
+.    RB "[" "\\$1" "]"
+..
+.
+.
+.\" Start example.
+.de EX
+.  nr mE \\n(.f
+.  nf
+.  nh
+.  ft CW
+..
+.
+.
+.\" End example.
+.de EE
+.  ft \\n(mE
+.  fi
+.  hy \\n(HY
+..
+.de SS3
+.sp \\n[PD]u
+.ft \\*[HF]
+.ps \\n[PS-SS]u
+.in \\n[IN]u
+.ne (2v + 1u)
+.if \\n[.$] \&\\$*
+..
+.TH vzctl 8 "1 Oct 2013" "OpenVZ" "Containers"
+.SH NAME
+vzctl \- perform various operations on an OpenVZ container
+.SH SYNOPSIS
+.SY vzctl
+[\fIflags\fR] \fBcreate\fR \fICTID\fR \fI--parameter value\fR [\.\.\.]
+.SY vzctl
+[\fIflags\fR] \fBstart\fR \fICTID\fR
+.OP --wait
+.OP --force
+.OP --skip-fsck
+.SY vzctl
+[\fIflags\fR] \fBstop\fR \fICTID\fR
+.OP --fast
+.OP --skip-umount
+.SY vzctl
+[\fIflags\fR] \fBrestart\fR \fICTID\fR
+.OP --wait
+.OP --force
+.OP --fast
+.OP --skip-fsck
+.SY vzctl
+[\fIflags\fR] \fBsuspend\fR | \fBresume\fR \fICTID\fR
+.OP --dumpfile name
+.SY vzctl
+[\fIflags\fR] \fBsnapshot\fR \fICTID\fR
+.OP --id uuid
+.OP --name name
+.OP --description desc
+.OP --skip-suspend
+.OP --skip-config
+.SY vzctl
+[\fIflags\fR] \fBsnapshot-switch\fR | \fBsnapshot-delete\fR \fICTID\fR \fB--id\fR \fIuuid\fR
+.SY vzctl
+[\fIflags\fR] \fBsnapshot-mount\fR \fICTID\fR \fB--id\fR \fIuuid\fR
+\fB--target\fR \fIdir\fR
+.SY vzctl
+[\fIflags\fR] \fBsnapshot-umount\fR \fICTID\fR \fB--id\fR \fIuuid\fR
+.SY vzctl
+[\fIflags\fR] \fBsnapshot-list\fR \fICTID\fR [\fB-H\fR] [\fB-o\fR \fIfield\fR[,\fIfield\fR...] [\fB--id\fR \fIuuid\fR]
+.SY vzctl
+[\fIflags\fR] \fBset\fR \fICTID\fR \fI--parameter value\fR [\.\.\.]
+.OP --save
+.OP --force
+.OP --setmode \fBrestart\fR|\fBignore
+.SY vzctl
+[\fIflags\fR] \fBset\fR \fICTID\fR \fB--reset_ub\fR
+.SY vzctl
+[\fIflags\fR] \fBdestroy\fR | \fBdelete\fR | \fBmount\fR | \fBumount\fR |
+\fBstatus\fR | \fBquotaon\fR | \fBquotaoff\fR | \fBquotainit\fR \fICTID\fR
+.SY vzctl
+[\fIflags\fR] \fBconsole\fR \fICTID\fR [\fIttynum\fR]
+.SY vzctl
+[\fIflags\fR] \fBconvert\fR \fICTID\fR
+.OP --layout \fBploop\fR[\fB:\fR{\fBexpanded\fR|\fBplain\fR|\fBraw\fR}]
+.SY vzctl
+[\fIflags\fR] \fBcompact\fR \fICTID\fR
+.SY vzctl
+[\fIflags\fR] \fBexec\fR | \fBexec2\fR \fICTID\fR
+\fIcommand\fR [\fIarg\fR ...]
+.SY vzctl
+[\fIflags\fR] \fBenter\fR \fICTID\fR
+.OP --exec command\ \fR[\fIarg\fR\ ...]
+.SY vzctl
+[\fIflags\fR] \fBrunscript\fR \fICTID\fR \fIscript\fR
+.SY vzctl
+\fB--help\fR | \fB--version\fR
+.YS
+.SH DESCRIPTION
+Utility \fBvzctl\fR runs on the host system (otherwise known as Hardware Node,
+or HN) and performs direct manipulations with containers (CTs).
+.PP
+Containers can be referred to by either numeric \fICTID\fR or
+by name (see \fB--name\fR option). Note that CT ID <= 100 are reserved for
+OpenVZ internal purposes. A numeric ID should not be more than
+\fB2147483644\fR.
+.SH OPTIONS
+
+.SS Flags
+
+These flags come before a command, and can be used with any command.
+They affect logging to console (terminal) only, and do not affect logging
+to a log file.
+.IP \fB--quiet\fR 4
+Disables output. Note that scripts run by vzctl are still able to produce
+some output.
+.IP \fB--verbose\fR 4
+Increments logging level up from the default. Can be used multiple times.
+Default value is set to the value of \fBVERBOSE\fR parameter in the global
+configuration file \fBvz.conf\fR(5), or to \fB0\fR if not set by
+\fBViERBOSE\fR parameter.
+
+.SS Setting container parameters
+.SY set
+.I CTID
+.\" Miscellaneous
+.OP --onboot \fByes\fR|\fBno
+.OP --bootorder number
+.OP --root path
+.OP --private path
+.OP --mount_opts options
+.OP --userpasswd user\fR:\fIpass
+.OP --disabled \fByes\fR|\fBno
+.OP --name name
+.OP --description string
+.OP --stop-timeout seconds
+.\" Networking
+.OP --ipadd addr
+.OP --ipdel addr\fR|\fBall\fR
+.OP --hostname name
+.OP --nameserver addr
+.OP --searchdomain name
+.OP --netif_add dev\fR[,\fIparams\fR...]
+.OP --netif_del dev\fR|\fBall\fR
+.\" veth interface configuration
+[\fB--ifname \fIdev\fR
+.OP --mac hwaddr
+.OP --host_ifname dev
+.OP --host_mac hwaddr
+.OP --bridge name
+.OP --mac_filter \fBon\fR|\fBoff\fR]
+.\" User Beancounter limits
+.OP --numproc items
+.OP --numtcpsock items
+.OP --numothersock items
+.OP --vmguarpages pages
+.OP --kmemsize bytes
+.OP --tcpsndbuf bytes
+.OP --tcprcvbuf bytes
+.OP --othersockbuf bytes
+.OP --dgramrcvbuf bytes
+.OP --oomguarpages pages
+.OP --lockedpages pages
+.OP --privvmpages pages
+.OP --shmpages pages
+.OP --numfile items
+.OP --numflock items
+.OP --numpty items
+.OP --numsiginfo items
+.OP --dcachesize bytes
+.OP --numiptent num
+.OP --physpages pages
+.OP --swappages pages
+.OP --ram bytes
+.OP --swap bytes
+.OP --vm_overcommit float
+.\" CPU fair scheduler
+.OP --cpuunits num
+.OP --cpulimit num
+.OP --cpus num
+.OP --cpumask cpus\fR|\fBall
+.\" Meminfo
+.OP --meminfo \fBnone\fR|\fImode\fR:\fIvalue
+.\" iptables control
+.OP --iptables name\fR[\fB,\fR...]
+.\" Network device control
+.OP --netdev_add ifname
+.OP --netdev_del ifname
+.\" Disk quota
+.OP --diskquota \fByes\fR|\fBno
+.OP --diskspace num
+.OP --diskinodes num
+.OP --quotatime seconds
+.OP --quotaugidlimit num
+.\" Capability
+.OP --capability capname\fR:\fBon\fR|\fBoff\fR[\fB,\fR...]
+.\" Device access management
+.OP --devnodes param
+.OP --devices param
+.\" PCI devices
+.OP --pci_add dev
+.OP --pci_del dev
+.\" Features
+.OP --features name\fR:\fBon\fR|\fBoff\fR[\fB,\fR...]
+.\" Apply config
+.OP --applyconfig name
+.OP --applyconfig_map group
+.\" I/O
+.OP --ioprio num
+.OP --iolimit mbps
+.OP --iopslimit iops
+.\" Options
+.OP --save
+.OP --force
+.OP --reset_ub
+.OP --setmode \fBrestart\fR|\fBignore
+.YS
+.IP "" 4
+This command sets various container parameters.
+If the container is currently running, \fBvzctl\fR applies these parameters
+to the container. The following options can be used with \fBset\fR command.
+
+.SS3 Flags
+.TP
+.B --save
+If this flag is given, parameters are saved in container configuration file
+\fBctid.conf\fR(5).
+.TP
+.B --force
+If this flag is given together with \fB--save\fR, parameters are saved
+even if the current kernel doesn't support OpenVZ. Note this flag
+does not make sense without \fB--save\fR, so \fB--save\fR is required.
+.TP
+.B --reset_ub
+If this flag is given, \fBvzctl\fR applies all User Beancounter parameters
+from the configuration file to a running container. This is helpful
+in case configuration file is modified manually. Please note this flag
+is exclusive, i.e. it can not be combined with any other options or flags.
+.TP
+\fB--setmode\fR \fBrestart\fR | \fBignore\fR
+A few parameters can only be applied by restarting the container.
+By default, \fBvzctl\fR prints a warning if such parameters are supplied
+and a container is running. Use \fB--setmode restart\fR
+together with \fB--save\fR flag to restart a container in such a case,
+or \fB--setmode ignore\fR to suppress the warning.
+
+.SS3 Miscellaneous
+.TP
+\fB--onboot\fR \fByes\fR | \fBno\fR
+Sets whether the container will be started during system boot.
+The container will be started on boot by \fBvz\fR initscript if
+either this parameter is set to \fByes\fR, or the container was running
+just before last reboot, and this parameter is not set to \fBno\fR.
+Default value is unset, meaning the container will be started if
+it was running before the last reboot.
+.TP
+\fB--bootorder\fR \fInumber\fR
+Sets the boot order priority for this CT. The higher the \fInumber\fR is,
+the earlier in the boot process this container starts. By default this
+parameter is unset, which is considered to be the lowest priority, so
+containers with unset \fBbootorder\fR will start last.
+.TP
+\fB--root\fR \fIpath\fR
+Sets the path to root directory (\fBVE_ROOT\fR) for this container.
+This is essentially a mount point for container's root directory.
+Argument can contain literal string \fB$VEID\fR, which will be
+substituted with the numeric CT ID.
+.TP
+\fB--private\fR \fIpath\fR
+Sets the path to private directory (\fBVE_PRIVATE\fR) for this container.
+This is a directory in which all the container's files are stored.
+Argument can contain literal string \fB$VEID\fR, which will be
+substituted with the numeric CT ID.
+.TP
+\fB--mount_opts\fR \fIoption\fR[\fB,\fIoption\fR...]
+Sets additional mount options for container file system. Only applicable
+for \fBploop\fR layout, ignored otherwise.
+.TP
+\fB--userpasswd\fR \fIuser\fR:\fIpassword\fR
+Sets password for the given user in a container, creating the user if
+it does not exists.
+Note that this option is not saved in configuration file at all (so
+\fB--save\fR flag is useless), it is applied directly to the container,
+by running distribution-specific programs inside the container.
+It is not recommended to combine this option with any other options.
+
+In case container was not running, it is automatically started
+then all the appropriate changes are applied, then it is stopped.
+
+Note that container should be created before using this option.
+.TP
+\fB--disabled\fR \fByes\fR | \fBno\fR
+Disable container start. To force the start of a disabled container,
+use \fBvzctl start --force\fR.
+.TP
+\fB--name\fR \fIname\fR
+Add a name for a container. The \fIname\fR can later be used in
+subsequent calls to \fBvzctl\fR in place of \fICTID\fR. Note this
+option can not be used without \fB--save\fR.
+.TP
+\fB--description\fR \fIstring\fR
+Add a textual description for a container.
+.TP
+\fB--stop-timeout\fR \fIseconds\fR
+Sets a time to wait for container to stop on \fBvzctl stop\fR before
+forcibly killing it, in seconds. Note this option can not be used
+without \fB--save\fR flag.
+
+Special value of \fB0\fR means to use compiled-in default.
+
+.SS3 Networking
+.TP
+\fB--ipadd\fR \fIaddr\fR
+Adds an IP address \fIaddr\fR to a given container. Address can optionally
+have a netmask specified in the CIDR notation (e.g. \fB10.1.2.3/25\fR).
+Note that this option is incremental, so
+\fIaddr\fR are added to already existing ones.
+.TP
+\fB--ipdel\fR \fIaddr\fR | \fBall\fR
+Removes IP address \fIaddr\fR from a container. If you want to remove all
+the addresses, use \fB--ipdel all\fR.
+.TP
+\fB--hostname\fR \fIname\fR
+Sets container hostname. \fBvzctl\fR writes it to the appropriate file inside a
+container (distribution-dependent).
+.TP
+\fB--nameserver\fR \fIaddr\fR
+Sets DNS server IP address for a container. If you want to set several
+nameservers, you should do it at once, so use \fB--nameserver\fR option
+multiple times in one call to \fBvzctl\fR, as all the name server values
+set in previous calls to \fBvzctl\fR are overwritten.
+
+A special value of \fBinherit\fR can be used to auto-propagate nameserver
+value(s) from the host system's \fB/etc/resolv.conf\fR file.
+.TP
+\fB--searchdomain\fR \fIname\fR
+Sets DNS search domains for a container. If you want to set several search
+domains, you should do it at once, so use \fB--searchdomain\fR option
+multiple times in one call to \fBvzctl\fR, as all the search domain values
+set in previous calls to \fBvzctl\fR are overwritten.
+
+A special value of \fBinherit\fR can be used to auto-propagate search domain
+value(s) from the host system's \fB/etc/resolv.conf\fR file.
+.TP
+\fB--netif_add\fR \fIifname[\fR,\fImac\fR,\fIhost_ifname\fR,\fIhost_mac\fR,\fIbridge]\fR
+Adds a virtual Ethernet device (veth) to a given container. Here \fIifname\fR
+is the Ethernet device name in the container, \fImac\fR is its MAC address,
+\fIhost_ifname\fR is the Ethernet device name on the host, and
+\fIhost_mac\fR is its MAC address. MAC addresses should be in the format
+like XX:XX:XX:XX:XX:XX. \fIbridge\fR is an optional parameter which can be
+used in custom network start scripts to automatically add the interface
+to a bridge. All parameters except \fIifname\fR are optional
+and are automatically generated if not specified.
+.TP
+\fB--netif_del\fR \fIdev_name\fR | \fBall\fR
+Removes virtual Ethernet device from a container. If you want to remove all
+devices, use \fBall\fR.
+
+.SS3 veth interface configuration
+.PP
+The following options can be used to reconfigure the already-created virtual
+Ethernet interface. To select the interface to configure, use
+\fB--ifname\fR \fIname\fR option.
+.TP
+\fB--mac\fR \fIXX:XX:XX:XX:XX:XX\fR
+MAC address of interface inside a container.
+.TP
+\fB--host_ifname\fR \fIname\fR
+interface name for virtual interface in the host system.
+.TP
+\fB--host_mac\fR \fIXX:XX:XX:XX:XX:XX\fR
+MAC address of interface in the host system.
+
+If you want an independent communication with the Container through the bridge,
+you should specify a multicast MAC address here (FE:FF:FF:FF:FF:FF).
+.TP
+\fB--bridge\fR \fIname\fR
+Bridge name. Custom network start scripts can use this value to automatically
+add the interface to a bridge.
+.TP
+\fB--mac_filter\fR \fBon\fR | \fBoff\fR
+Enables/disables MAC address filtering for the Container veth device and
+the possibility of configuring the MAC address of this device from inside
+the Container. If the filtering is turned on:
+.br
+ \(bu the veth device accepts only those packets that have a MAC address in
+their headers corresponding to that of this device (excluding all broadcast
+and multicast packets);
+.br
+ \(bu it is impossible to modify the veth MAC address from inside the Container.
+
+By default, this functionality is enabled for all veth devices existing
+inside the Container.
+
+.SS3 VSwap limits
+.PP
+The following options sets memory and swap limits for VSwap-enabled kernels
+(kernel version 042stab042 or greater).
+.PP
+Argument is in bytes, unless otherwise specified by an optional suffix.
+Available suffixes are:
+.PP
+\(bu \fBT\fR, \fBt\fR	- terabytes;
+.br
+\(bu \fBG\fR, \fBg\fR	- gigabytes;
+.br
+\(bu \fBM\fR, \fBm\fR	- megabytes;
+.br
+\(bu \fBK\fR, \fBk\fR	- kilobytes;
+.br
+\(bu \fBP\fR, \fBp\fR	- memory pages (arch-specific, usually 4KB);
+.br
+\(bu \fBB\fR, \fBb\fR	- bytes (this is the default).
+.PP
+.TP
+\fB--ram\fR \fIbytes\fR
+Sets physical memory (RAM) available to a container.
+Actually, the option is a shortcut for setting \fB--physpages\fR limit
+(the barrier is set to 0).
+.TP
+\fB--swap\fR \fIbytes\fR
+Set swap space available to a container.
+Actually, the option is a shortcut for setting \fB--swappages\fR limit
+(the barrier is set to 0).
+.TP
+\fB--vm_overcommit\fR \fIfloat\fR
+Set VM overcommitment value to \fIfloat\fR. If set, it is used to calculate
+\fBprivmmpages\fR parameter in case it is not set explicitly (see below).
+Default value is \fB0\fR, meaning unlimited privvmpages.
+.PP
+\fBvzctl\fR checks if running kernel is VSwap capable, and
+refuses to use these parameters otherwise. This behavior can be overriden
+by using \fB--force\fR flag before parameters.
+.PP
+In VSwap mode, all beancounters other than RAM and swap become optional.
+Note though that if some optional beancounters are not set, they are
+calculated and set by vzctl implicitly, using the following formulae:
+.PP
+.B \(bu lockedpages.barrier = oomguarpages.barrier = ram
+.PP
+.B \(bu lockedpages.limit = oomguarpages.limit = unlimited
+.PP
+.B \(bu vmguarpages.barrier = vmguarpages.limit = ram + swap
+.PP
+.B \(bu privvmpages.barrier = privvmpages.limit = (ram + swap) * vm_overcommit
+.PP
+(if \fBvm_overcommit\fR is \fB0\fR or not set, \fBprivvmpages\fR
+is set to "unlimited")
+.PP
+Here is an example of setting container 777 to have
+512 megabytes of RAM and 1 gigabyte of swap:
+.EX
+   vzctl set 777 --ram 512M --swap 1G --save
+.EE
+
+.SS3 User Beancounter limits
+.PP
+The following options sets barrier and limit for various user beancounters.
+.PP
+Note that for VSwap-enabled kernels (version 042stab042 or greater) these
+limits are optional, you must only set \fB--ram\fR and \fB--swap\fR
+(see above). For older kernels, these limits are obligatory.
+.PP
+Each option requires one or two arguments. In case of one argument,
+\fBvzctl\fR sets barrier and limit to the same value. In case of
+two colon-separated arguments, the first is a barrier,
+and the second is a limit. Each argument is either a number, a number
+with a suffix, or a special value \fBunlimited\fR.
+.PP
+Arguments are in items, pages or bytes. Note that page size
+is architecture-specific, it is 4096 bytes on x86 and x86_64 platforms.
+.PP
+You can also specify different suffixes for User Beancounter parameters
+(except for those which names start with \fBnum\fR).
+For example, \fBvzctl set\fR \fICTID\fR \fB--privvmpages 5M:6M\fR
+should set \fBprivvmpages\fR' barrier to 5 megabytes and its limit
+to 6 megabytes.
+.PP
+Available suffixes are:
+.PP
+\(bu \fBT\fR, \fBt\fR	- terabytes;
+.br
+\(bu \fBG\fR, \fBg\fR	- gigabytes;
+.br
+\(bu \fBM\fR, \fBm\fR	- megabytes;
+.br
+\(bu \fBK\fR, \fBk\fR	- kilobytes;
+.br
+\(bu \fBP\fR, \fBp\fR	- memory pages (arch-specific, usually 4KB);
+.br
+\(bu \fBB\fR, \fBb\fR	- bytes.
+.PP
+You can also specify the literal word \fBunlimited\fR in place of a number.
+In that case the corresponding value will be set to \fBLONG_MAX\fR, i. e.
+the maximum possible value.
+.TP
+\fB--numproc\fR \fIitems\fR[:\fIitems\fR]
+Maximum number of processes and kernel-level threads.
+Setting the barrier and
+the limit to different values does not make practical sense.
+.TP
+\fB--numtcpsock\fR \fIitems\fR[:\fIitems\fR]
+Maximum number of TCP sockets. This parameter limits the number of TCP
+connections and, thus, the number of clients the server application can
+handle in parallel.
+Setting the barrier and
+the limit to different values does not make practical sense.
+.TP
+\fB--numothersock\fR \fIitems\fR[:\fIitems\fR]
+Maximum number of non-TCP sockets (local sockets, UDP and other types
+of sockets).
+Setting the barrier and
+the limit to different values does not make practical sense.
+.TP
+\fB--vmguarpages\fR \fIpages\fR[:\fIpages\fR]
+Memory allocation guarantee. This parameter controls how much memory is
+available to a container. The barrier is the amount
+of memory that container's applications are guaranteed to be able to allocate.
+The meaning of the limit is currently unspecified; it should be set to
+\fBunlimited\fR.
+.TP
+\fB--kmemsize\fR \fIbytes\fR[:\fIbytes\fR]
+Maximum amount of kernel memory used. This parameter is related to
+\fB--numproc\fR. Each process consumes certain amount of kernel memory -
+16 KB at least, 30-50 KB typically. Very large processes may consume
+a bit more. It is important to have a certain safety gap between the
+barrier and the limit of this parameter: equal barrier and limit may
+lead to the situation where the kernel will need to kill container's
+applications to keep the \fBkmemsize\fR usage under the limit.
+.TP
+\fB--tcpsndbuf\fR \fIbytes\fR[:\fIbytes\fR]
+Maximum size of TCP send buffers.
+Barrier should be not less than 64 KB, and difference between
+barrier and limit should be equal to or more than value of
+\fBnumtcpsock\fR multiplied by 2.5 KB.
+.TP
+\fB--tcprcvbuf\fR \fIbytes\fR[:\fIbytes\fR]
+Maximum size of TCP receive buffers.
+Barrier should be not less than 64 KB, and difference between
+barrier and limit should be equal to or more than value of
+\fBnumtcpsock\fR multiplied by 2.5 KB.
+.TP
+\fB--othersockbuf\fR \fIbytes\fR[:\fIbytes\fR]
+Maximum size of other (non-TCP) socket send buffers. If container's processes
+needs to send very large datagrams, the barrier should be set accordingly.
+Increased limit is necessary for high performance of communications through
+local (UNIX-domain) sockets.
+.TP
+\fB--dgramrcvbuf\fR \fIbytes\fR[:\fIbytes\fR]
+Maximum size of other (non-TCP) socket receive buffers. If container's
+processes needs to receive very large datagrams, the barrier should be set
+accordingly. The difference between the barrier and the limit is not needed.
+.TP
+\fB--oomguarpages\fR \fIpages\fR[:\fIpages\fR]
+Guarantees against OOM kill. Under this beancounter the kernel accounts the
+total amount of memory and swap space used by the container's processes.
+The barrier of this parameter is the out-of-memory guarantee. If the
+\fBoomguarpages\fR usage is below the barrier, processes of this container
+are guaranteed not to be killed in out-of-memory situations.
+The meaning of limit is currently unspecified; it should be set to
+\fBunlimited\fR.
+.TP
+\fB--lockedpages\fR \fIpages\fR[:\fIpages\fR]
+Maximum number of pages acquired by \fBmlock\fR(2).
+.TP
+\fB--privvmpages\fR \fIpages\fR[:\fIpages\fR]
+Allows controlling the amount of memory allocated by the applications.
+For shared (mapped as \fBMAP_SHARED\fR) pages, each container really using
+a memory page is charged for the fraction of the page (depending on the
+number of others using it). For "potentially private" pages (mapped as
+\fBMAP_PRIVATE\fR), container is charged either for a fraction of the size
+or for the full size if the allocated address space. In the latter case,
+the physical pages associated with the allocated address space may be
+in memory, in swap or not physically allocated yet.
+
+The barrier and the limit of this parameter
+control the upper boundary of the total size of allocated memory. Note that
+this upper boundary does not guarantee that container will be able
+to allocate that much memory. The primary mechanism to control memory
+allocation is the \fB--vmguarpages\fR guarantee.
+.TP
+\fB--shmpages\fR \fIpages\fR[:\fIpages\fR]
+Maximum IPC SHM segment size.
+Setting the barrier and
+the limit to different values does not make practical sense.
+.TP
+\fB--numfile\fR \fIitems\fR[:\fIitems\fR]
+Maximum number of open files. In most cases the barrier and the limit
+should be set to the same value. Setting the barrier to \fB0\fR effectively
+disables pre-charging optimization for this beancounter in the kernel,
+which leads to the held value being precise but could slightly degrade
+file open performance.
+.TP
+\fB--numflock\fR \fIitems\fR[:\fIitems\fR]
+Maximum number of file locks. Safety gap should be between barrier and limit.
+.TP
+\fB--numpty\fR \fIitems\fR[:\fIitems\fR]
+Number of pseudo-terminals (PTY). Note that in OpenVZ each container can have
+not more than 255 PTYs. Setting the barrier and
+the limit to different values does not make practical sense.
+.TP
+\fB--numsiginfo\fR \fIitems\fR[:\fIitems\fR]
+Number of siginfo structures.
+Setting the barrier and
+the limit to different values does not make practical sense.
+.TP
+\fB--dcachesize\fR \fIbytes\fR[:\fIbytes\fR]
+Maximum size of filesystem-related caches, such as directory entry
+and inode caches. Exists as a separate parameter to impose a limit
+causing file operations to sense memory shortage and return an errno
+to applications, protecting from memory shortages during critical
+operations that should not fail.
+Safety gap should be between barrier and limit.
+.TP
+\fB--numiptent\fR \fInum\fR[:\fInum\fR]
+Number of iptables (netfilter) entries.
+Setting the barrier and
+the limit to different values does not make practical sense.
+.TP
+\fB--physpages\fR \fIpages\fR[:\fIpages\fR]
+On VSwap-enabled kernels, this limits the amount of physical memory
+(RAM) available to a container. The barrier should be set to \fB0\fR,
+and the limit to a total size of RAM that can be used used by a container.
+
+For older kernels, this is an accounting-only parameter, showing the usage
+of RAM by this container. Barrier should be set to \fB0\fR, and limit
+should be set to \fBunlimited\fR.
+.TP
+\fB--swappages\fR \fIpages\fR[:\fIpages\fR]
+For VSwap-enabled kernels (042stab042 or greater), this parameter limits
+the amount of swap space available to a container. The barrier should
+be set to \fB0\fR, and the limit to a total size of swap that can be used
+by a container.
+
+For older (pre-VSwap) kernels, the limit is used to show a total amount
+of swap space available inside the container. The barrier of this parameter
+is ignored. The default value is \fBunlimited\fR, meaning total swap will
+be reported as 0.
+
+.SS3 CPU fair scheduler parameters
+.PP
+These parameters control CPU usage by container.
+.TP
+\fB--cpuunits\fR \fInum\fR
+CPU weight for a container. Argument is positive non-zero number, passed to
+and used in the kernel fair scheduler. The larger the number is, the more
+CPU time this container gets. Maximum value is 500000, minimal is 8.
+Number is relative to weights of all the other running containers.
+If \fBcpuunits\fR are not specified, default value of 1000 is used.
+
+You can set CPU weight for CT0 (host system itself) as well
+(use \fBvzctl set 0 --cpuunits \fInum\fR). Usually, OpenVZ initscript
+(\fB/etc/init.d/vz\fR) takes care of setting this.
+.TP
+\fB--cpulimit\fR \fInum\fR[\fB%\fR]
+Limit of CPU usage for the container, in per cent.
+Note if the computer has 2 CPUs, it has total of 200% CPU time. Default CPU
+limit is \fB0\fR (no CPU limit).
+.TP
+\fB--cpus\fR \fInum\fR
+sets number of CPUs available in the container.
+.TP
+\fB--cpumask\fR \fIcpus\fR | \fBall\fR
+sets list of allowed CPUs for the container.
+Input format is a comma-separated list of decimal numbers and ranges.
+Consecutively set bits are shown as two hyphen-separated decimal numbers,
+the smallest and largest bit numbers set in the range.
+For example, if you want the container to execute on CPUs 0, 1, 2, 7,
+you should pass \fB0-2,7\fR.
+Default value is \fBall\fR (the container can execute on any CPU).
+
+.SS3 Memory output parameters
+.PP
+For VSwap-enabled kernels (042stab042 or greater), this parameter is ignored.
+For older kernels, it controls the output of /proc/meminfo inside a container.
+.TP
+\fB--meminfo\fR \fBnone\fR
+No /proc/meminfo virtualization (the same as on host system).
+.TP
+\fB--meminfo\fR \fImode\fR:\fIvalue\fR
+Configure total memory output in a container. Reported free memory is evaluated
+accordingly to the mode being set. Reported swap is evaluated
+according to the settings of \fB--swappages\fR parameter.
+
+You can use the following modes for \fImode\fR:
+.br
+ \(bu \fBpages\fR:\fIvalue\fR - sets total memory in pages;
+.br
+ \(bu \fBprivvmpages\fR:\fIvalue\fR - sets total memory as
+\fBprivvmpages\fR * \fIvalue\fR.
+
+Default is \fBprivvmpages:1\fR.
+
+.SS3 iptables control parameters
+.TP
+\fB--iptables\fR \fIname\fR[\fB,\fR...]
+Allow to use the functionality of \fIname\fR iptables module inside
+the container. Multiple comma-separated \fIname\fRs can be specified.
+
+The default list of enabled iptables modules is defined
+by the \fBIPTABLES\fR variable in \fBvz.conf\fR(5).
+
+You can use the following values for \fIname\fR:
+\fBiptable_filter\fR, \fBiptable_mangle\fR, \fBipt_limit\fR,
+\fBipt_multiport\fR, \fBipt_tos\fR, \fBipt_TOS\fR, \fBipt_REJECT\fR,
+\fBipt_TCPMSS\fR, \fBipt_tcpmss\fR, \fBipt_ttl\fR, \fBipt_LOG\fR,
+\fBipt_length\fR, \fBip_conntrack\fR, \fBip_conntrack_ftp\fR,
+\fBip_conntrack_irc\fR, \fBipt_conntrack\fR, \fBipt_state\fR,
+\fBipt_helper\fR, \fBiptable_nat\fR, \fBip_nat_ftp\fR, \fBip_nat_irc\fR,
+\fBipt_REDIRECT\fR, \fBxt_mac\fR, \fBipt_recent\fR, \fBipt_owner\fR.
+
+.SS3 Network devices control parameters
+.TP
+\fB--netdev_add\fR \fIname\fR
+move network device from the host system to a specified container
+.TP
+\fB--netdev_del\fR \fIname\fR
+delete network device from a specified container
+
+.SS3 Disk quota parameters
+.TP
+\fB--diskquota\fR \fByes\fR | \fBno\fR
+allows to enable or disable disk quota for a container. By default,
+a global value (\fBDISK_QUOTA\fR) from \fBvz.conf\fR(5) is used.
+
+Note that this parameter is ignored for \fBploop\fR layout.
+.TP
+\fB--diskspace\fR \fInum\fR[:\fInum\fR]
+For \fBsimfs\fR layout, sets soft and hard disk quota limits.
+First parameter is soft limit, second is hard limit.
+
+For \fBploop\fR layout, initiates the procedure of resizing
+the ploop image file to the new size. Since there is no soft/hard
+limit concept in ploop, second \fInum\fR, if specified, is ignored.
+Note that such resize is NOT performed on container start, so
+for consistency \fB--diskspace\fR must be used together
+with \fB--save\fR flag.
+
+Suffixes \fBG\fR, \fBM\fR, \fBK\fR can also be specified
+(see \fBResource limits\fR section for more info on suffixes).
+If suffix is not specified, value is in kilobytes.
+.TP
+\fB--diskinodes\fR \fInum\fR[:\fInum\fR]
+sets soft and hard disk quota limits, in i-nodes. First parameter is
+soft limit, second is hard limit.
+
+Note that this parameter is ignored for \fBploop\fR layout.
+.TP
+\fB--quotatime\fR \fIseconds\fR
+sets quota grace period. Container is permitted to exceed its soft limits
+for the grace period, but once it has expired, the soft limit is enforced
+as a hard limit.
+
+Note that this parameter is ignored for \fBploop\fR layout.
+.TP
+\fB--quotaugidlimit\fR \fInum\fR
+Enables or disables in-container per-user and per-group disk quotas.
+If the value is set to \fB0\fR or not set,
+disk quotas inside the container is disabled and not accounted.
+
+For \fBsimfs\fR layout containers, non-zero value sets maximum number
+of user/group IDs for which disk quota is accounted.
+
+For \fBploop\fR layout containers, any non-zero value enables disk quota
+inside the container; the number of user/group IDs used by disk quota
+is not limited by OpenVZ.
+
+Note that enabling or disabling in-container disk quotas requires container
+restart, so consider using \fB--setmode\fR option.
+
+.SS3 Capability option
+.TP
+\fB--capability\fR \fIcapname\fR:\fBon\fR|\fBoff\fR[\fB,\fR...]
+Sets a capability for a container. Multiple comma-separated capabilities
+can be specified.
+
+Note that setting a capability when
+the container is running does not take immediate effect; restart the container
+in order for the changes to take effect (consider using \fB--setmode\fR
+option).
+
+A container has the default set of capabilities, thus any operation on
+capabilities is "logical AND" with the default capability mask.
+
+You can use the following values for \fIcapname\fR:
+\fBchown\fR, \fBdac_override\fR, \fBdac_read_search\fR, \fBfowner\fR,
+\fBfsetid\fR, \fBkill\fR, \fBsetgid\fR, \fBsetuid\fR,
+\fBsetpcap\fR, \fBlinux_immutable\fR, \fBnet_bind_service\fR,
+\fBnet_broadcast\fR, \fBnet_admin\fR, \fBnet_raw\fR,
+\fBipc_lock\fR, \fBipc_owner\fR, \fBsys_module\fR, \fBsys_rawio\fR,
+\fBsys_chroot\fR, \fBsys_ptrace\fR, \fBsys_pacct\fR,
+\fBsys_admin\fR, \fBsys_boot\fR, \fBsys_nice\fR, \fBsys_resource\fR,
+\fBsys_time\fR, \fBsys_tty_config\fR, \fBmknod\fR, \fBlease\fR,
+\fBsetveid\fR, \fBve_admin\fR. For detailed description, see
+.BR capabilities (7).
+
+\fBWARNING\fR: setting some of those capabilities may have far reaching security
+implications, so do not do it unless you know what you are doing. Also note
+that setting \fBsetpcap:on\fR for a container will most probably lead to
+inability to start it.
+
+.SS3 Device access management
+.TP
+\fB--devnodes\fR \fIdevice\fR:[\fBr\fR][\fBw\fR][\fBq\fR]|\fBnone\fR
+Give the container an access (\fBr\fR - read, \fBw\fR - write,
+\fBq\fR - disk quota management, \fBnone\fR - no access)
+to a device designated by the special file /dev/\fIdevice\fR. Device file
+is created in a container by \fBvzctl\fR. Example:
+.EX
+   vzctl set 777 --devnodes sdb:rwq
+.EE
+.TP
+\fB--devices\fR \fBb\fR|\fBc\fR:\fImajor\fR:\fIminor\fR|\fBall\fR:[\fBr\fR][\fBw\fR][\fBq\fR]|\fBnone\fR
+Give the container an access to a \fBb\fRlock or \fBc\fRharacter device
+designated by its \fImajor\fR and \fIminor\fR numbers. Device file have to be created manually.
+
+.SS3 PCI device management
+.TP
+\fB--pci_add\fR [\fIdomain\fR:]\fIbus\fR:\fIslot\fR.\fIfunc\fR
+Give the container an access to a specified PCI device. All numbers are
+hexadecimal (as printed by \fBlspci\fR(8) in the first column).
+.TP
+\fB--pci_del\fR [\fIdomain\fR:]\fIbus\fR:\fIslot\fR.\fIfunc\fR
+Delete a PCI device from the container.
+
+Note that \fBvps-pci\fR configuration script is executed by \fBvzctl\fR
+then configuring PCI devices. The script is usually located at
+\fB/usr/libexec/vzctl/scripts/\fR.
+
+.SS3 Features management
+.TP
+\fB--features\fR \fIname\fR:\fBon\fR|\fBoff\fR[\fB,\fR...]
+Enable or disable a specific container feature.
+Known features are: \fBsysfs\fR, \fBnfs\fR, \fBsit\fR, \fBipip\fR, \fBppp\fR,
+\fBipgre\fR, \fBbridge\fR, \fBnfsd\fR. A few features can be specified at
+once, comma-separated.
+
+.SS3 Apply config
+.TP
+\fB--applyconfig\fR \fIname\fR
+Read container parameters from the container sample configuration file
+\fB\f(CW/etc/vz/conf/ve-\fIname\fR\fB\f(CW.conf-sample\fR, and
+apply them, if \fB--save\fR option specified save to the container config file.
+The following parameters are not changed: \fBHOSTNAME\fR, \fBIP_ADDRESS\fR,
+\fBOSTEMPLATE\fR, \fBVE_ROOT\fR, and \fBVE_PRIVATE\fR.
+.TP
+\fB--applyconfig_map\fR \fIgroup\fR
+Apply container config parameters selected by \fIgroup\fR. Now the only
+possible value for \fIgroup\fR is \fBname\fR:
+to restore container name based on \fBNAME\fR
+variable in container configuration file.
+
+.SS3 I/O scheduling
+.TP
+\fB--ioprio\fR \fIpriority\fR
+Assigns disk I/O priority to container. \fIPriority\fR range is \fB0-7\fR.
+The greater \fIpriority\fR is, the more time for I/O activity container has.
+By default each container has \fIpriority\fR of \fB4\fR.
+.TP
+\fB--iolimit\fR \fIlimit\fR[\fBB\fR|\fBK\fR|\fBM\fR|\fBG\fR]
+Assigns disk I/O bandwidth limit for a container. Value is either a number
+with an optional suffix, or a literal string \fBunlimited\fR.
+Value of \fB0\fR means "unlimited". By default a container has no I/O limit.
+Maximum allowed limit is 2 gigabytes per second; values exceeding the limit
+are truncated.
+
+If no suffix is provided, the \fIlimit\fR is assumed to be in megabytes
+per second. Available suffixes are:
+.br
+\(bu \fBb\fR, \fBB\fR -- bytes per second;
+.br
+\(bu \fBk\fR, \fBK\fR -- kilobytes per second;
+.br
+\(bu \fBm\fR, \fBM\fR -- megabytes per second (default);
+.br
+\(bu \fBg\fR, \fBG\fR -- gigabytes per second;
+.TP
+\fB--iopslimit\fR \fIiops\fR
+Assigns IOPS limit for a container, in number of input/output operations
+per second. Value is a number or a literal string \fBunlimited\fR.
+Value of \fB0\fR means "unlimited". By default a container has no IOPS limit.
+
+.SS Suspending and resuming
+
+Checkpointing is a feature of OpenVZ kernel which allows to save a complete
+in-kernel state of a running container, and to restore it later.
+.TP 4
+\fBsuspend\fR|\fBchkpnt\fR \fICTID\fR [\fB--dumpfile\fR \fIname\fR]
+This command suspends a container to a dump file
+If an option \fB--dumpfile\fR is not set, default
+dump file name \fB/vz/dump/Dump.\fICTID\fR is used.
+.TP 4
+\fBresume\fR|\fBrestore\fR \fICTID\fR [\fB--dumpfile\fR \fIname\fR]
+This command restores a container from the dump file created by the
+\fBsuspend\fR command.
+
+.SS Snapshotting
+
+Snapshotting is a feature based on checkpointing and ploop shapshots.
+It allows to save a complete state of container file system. Plus, if
+the container is running, it's in-memory state (as in checkpointing).
+Note that snapshot functionality is only working
+for containers on ploop device.
+.TP 4
+\fBsnapshot\fR \fICTID\fR [\fB--id \fIuuid\fR] [\fB--name \fIname\fR] [\fB--description \fIdesc\fR] [\fB--skip-suspend\fR] [\fB--skip-config\fR]
+Creates a container snapshot, i.e. saves the current container state,
+including its file system state, running processes state,
+and configuration file.
+
+If a container is running, and \fB--skip-suspend\fR option is not specified,
+a container is checkpointed and then restored, and CT memory dump becomes the
+part of snapshot.
+
+Unless \fB--skip-config\fR option is given, container configuration file
+is saved to the snapshot.
+
+If \fIuuid\fR is not specified, it is auto-generated.
+Options \fB--name\fR and \fB--description\fR can be used to specify the
+snapshot name and description, respectively. Name is displayed by
+\fBsnapshot-list\fR.
+.TP 4
+\fBsnapshot-switch\fR \fICTID\fR \fB--id\fR \fIuuid\fR
+Switches the container to a snapshot identified by \fIuuid\fR.
+Note that the current container state and its file system state is lost!
+If given snapshot contains CT memory dump, it is restored, otherwise
+container is stopped.
+.TP 4
+\fBsnapshot-delete\fR \fICTID\fR \fB--id\fR \fIuuid\fR
+Removes a specified snapshot.
+.TP 4
+\fBsnapshot-mount\fR \fICTID\fR \fB--id\fR \fIuuid\fR \fB--target\fR \fIdirectory\fR
+Mounts a snapshot specified by \fIuuid\fR to a \fIdirectory\fR. Note
+this mount is read-only.
+.TP 4
+\fBsnapshot-umount\fR \fICTID\fR \fB--id\fR \fIuuid\fR
+Unmounts a specified snapshot.
+.TP 4
+\fBsnapshot-list\fR \fICTID\fR [\fB-H\fR] [\fB-o\fR \fIfield\fR[,\fIfield\fR...] [\fB--id\fR \fIuuid\fR]
+List container's snapshots.
+
+You can suppress displaying header using \fB-H\fR option.
+
+You can use the \fB-o\fR option to display only the specified \fIfield\fR(s).
+List of available fields can be obtained using \fB-L\fR option.
+
+.SS Performing container actions
+
+.SY create
+.I CTID
+.OP --ostemplate name
+.OP --config name
+.OP --layout \fBsimfs\fR|\fBploop\fR[\fB:\fR{\fBexpanded\fR|\fBplain\fR|\fBraw\fR}]
+.OP --diskspace \fIkbytes\fR
+.OP --private path
+.OP --root path
+.OP --ipadd addr
+.OP --hostname name
+.OP --name name
+.OP --local_uid uid
+.OP --local_gid gid
+.YS
+.IP "" 4
+Creates a new container area. This operation should be done once, before
+the first start of the container.
+
+By default, an OS template denoted by \fBDEF_OSTEMPLATE\fR parameter
+of \fBvz.conf\fR(5) is used to create a container. This can be overwritten
+by \fB--ostemplate\fR option.
+
+By default, a new container configuration file is created from a sample
+configuration denoted by value of \fBCONFIGFILE\fR parameter of
+\fBvz.conf\fR(5). If the container configuration file already exists,
+it will not be modified.
+
+The value of \fBCONFIGFILE\fR can be overwritten by using the
+\fB--config\fR \fIname\fR option. This option can not be used
+if the container configuration file already exists.
+
+A new container can either be created using \fBsimfs\fR filesystem or
+on a \fBploop\fR device. The default is set by value of \fBVE_LAYOUT\fR
+parameter of \fBvz.conf\fR(5) and can be overwritten by \fB--layout\fR
+option. In case \fBploop\fR is used, one can additionally specify ploop
+disk image format after a colon. Possible ploop formats are \fBexpanded\fR,
+\fBplain\fR and \fBraw\fR. Default is \fBexpanded\fR.
+Using value other than \fBexpanded\fR is not recommended and is currently
+not supported.
+
+You can use \fB--diskspace\fR option to specify container file system size.
+If DISKSPACE is not specified either in the sample configuration file used
+or in global configuration file \fBvz.conf\fR(5), this parameter
+is required for \fBploop\fR layout.
+
+Suffixes \fBG\fR, \fBM\fR, \fBK\fR can also be specified
+(see \fBResource limits\fR section for more info on suffixes).
+
+You can use \fB--root\fR \fIpath\fR option to sets the path to the mount
+point for the container root directory (default is \fBVE_ROOT\fR specified in
+\fBvz.conf\fR(5) file). Argument can contain literal string \fB$VEID\fR,
+which will be substituted with the numeric CT ID.
+
+You can use \fB--private\fR \fIpath\fR option to set the path to directory
+in which all the files and directories specific to this very container
+are stored (default is \fBVE_PRIVATE\fR specified in \fBvz.conf\fR(5) file).
+Argument can contain literal string \fB$VEID\fR, which will be substituted with
+the numeric CT ID.
+
+You can use \fB--ipadd\fR \fIaddr\fR option to assign an IP address to
+a container. Note that this option can be used multiple times.
+
+You can use \fB--hostname\fR \fIname\fR option to set a host name for
+a container.
+
+When running with an upstream Linux Kernel that supports user namespaces (>=
+3.8), the parameters \fB--local_uid\fR and \fB--local_gid\fR can be used to
+select which \fIuid\fR and \fIgid\fR respectively will be used as a base user
+in the host system. Note that user namespaces provide a 1:1 mapping between
+container users and host users. If these options are not specified, the values
+\fBLOCAL_UID\fR and \fBLOCAL_GID\fR from global configuration file
+\fBvz.conf\fR(5) are used. An explicit \fB--local_uid\fR value of 0 will
+disable user namespace support, and run the container as a privileged user. In
+this case, \fB--local_gid\fR is ignored.
+
+\fBWarning:\fR use \fB--local_uid\fR and \fB--local_gid\fR with care, specially
+when migrating containers. In all situations, the container's files in the
+filesystem needs to be correctly owned by the host-side users.
+
+.IP "\fBdestroy\fR | \fBdelete\fR \fICTID\fR" 4
+Removes a container private area by deleting all files, directories and
+the configuration file of this container.
+.IP "\fBstart\fR \fICTID\fR [\fB--wait\fR] [\fB--force\fR] [\fB--skip-fsck\fR]" 4
+Mounts (if necessary) and starts a container. Unless \fB--wait\fR option
+is specified, \fBvzctl\fR will return immediately; otherwise an attempt to
+wait till the default runlevel is reached will be made by \fBvzctl\fR.
+
+Specify \fB--force\fR if you want to start a container which is disabled
+(see \fB--disabled\fR).
+
+Specify \fB--skip-fsck\fR to skip fsck for ploop-based container filesystem
+(this option is used by vz initscript).
+
+Note that this command can lead to execution of \fBpremount\fR, \fBmount\fR
+and \fBstart\fR action scripts (see \fBACTION SCRIPTS\fR below).
+.IP "\fBstop\fR \fICTID\fR [\fB--fast\fR] [\fB--skip-umount\fR]" 4
+Stops a container and unmounts it (unless \fB--skip-umount\fR is given).
+Normally, \fBhalt\fR(8) is executed
+inside a container; option \fB--fast\fR makes \fBvzctl\fR use
+\fBreboot\fR(2) syscall instead which is faster but can lead to
+unclean container shutdown.
+
+Note that \fBvzctl stop\fR is not asyncronous, in other words vzctl waits
+for container's init to exit (unless \fB--fast\fR is given), which can
+take up to a few minutes. Default wait timeout is 120 seconds; it can be
+changed globally, by setting \fBSTOP_TIMEOUT\fR in \fBvz.conf\fR(5),
+or per container (\fBSTOP_TIMEOUT\fR in \fBctid.conf\fR(5), see
+\fB--stop-timeout\fR).
+
+Note that this command can lead to execution of \fBstop\fR,
+\fBumount\fR and \fBpostumount\fR action scripts
+(see \fBACTION SCRIPTS\fR below).
+.IP "\fBrestart\fR \fICTID\fR [\fB--wait\fR] [\fB--force\fR] [\fB--fast\fR] [\fB--skip-fsck\fR]" 4
+Restarts a container, i.e. stops it if it is running, and starts again.
+Accepts all the \fBstart\fR and \fBstop\fR options.
+
+Note that this command can lead to execution of some action scripts
+(see \fBACTION SCRIPTS\fR below).
+.IP "\fBstatus\fR \fICTID\fR" 4
+Shows a container status. This is a line with five or six words,
+separated by spaces.
+
+First word is literally \fBCTID\fR.
+
+Second word is the numeric \fICT ID\fR.
+
+Third word is showing whether this container exists or not,
+it can be either \fBexist\fR or \fBdeleted\fR.
+
+Fourth word is showing the status of the container filesystem,
+it can be either \fBmounted\fR or \fBunmounted\fR.
+
+Fifth word shows if the container is running,
+it can be either \fBrunning\fR or \fBdown\fR.
+
+Sixth word, if exists, is \fBsuspended\fR. It appears if
+a dump file exists for a stopped container (see \fBsuspend\fR).
+
+This command can also be usable from scripts.
+.IP "\fBmount\fR \fICTID\fR" 4
+Mounts container private area. Note that this command can lead
+to execution of \fBpremount\fR and \fBmount\fR action scripts
+(see \fBACTION SCRIPTS\fR below).
+.IP "\fBumount\fR \fICTID\fR" 4
+Unmounts container private area. Note that this command can lead
+to execution of \fBumount\fR and \fBpostumount\fR action scripts
+(see \fBACTION SCRIPTS\fR below).
+
+Note that \fBstop\fR does \fBumount\fR automatically.
+.IP "\fBconvert\fR \fICTID\fR [\fB--layout ploop\fR[\fB:\fR{\fBexpanded\fR|\fBplain\fR|\fBraw\fR}]]" 4
+Convert CT private area to reside on a ploop device (available in kernel
+version 042stab052.8 and greater). Conversion should be performed when
+a container is stopped, plus disk space quota should be set.
+.IP "\fBcompact\fR \fICTID\fR" 4
+Compact container image. This only makes sense for ploop layout.
+.IP "\fBquotaon\fR \fICTID\fR" 4
+Turn disk quota on. Not that \fBmount\fR and \fBstart\fR does that
+automatically.
+.IP "\fBquotaoff\fR \fICTID\fR" 4
+Turn disk quota off. Not that \fBumount\fR and \fBstop\fR
+does that automatically.
+.IP "\fBquotainit\fR \fICTID\fR" 4
+Initialize disk quota (i.e. run \fBvzquota init\fR) with the parameters
+taken from the CT configuration file \fBctid.conf\fR(5).
+.IP "\fBexec\fR \fICTID\fR \fIcommand\fR" 4
+Executes \fIcommand\fR in a container. Environment variables are not set
+inside the container.
+Signal handlers may differ from default settings. If \fIcommand\fR is \fB-\fR,
+commands are read from stdin.
+.IP "\fBexec2\fR \fICTID\fR \fIcommand\fR" 4
+The same as \fBexec\fR, but return code is that of \fIcommand\fR.
+.IP "\fBrunscript\fR \fICTID\fR \fIscript\fR" 4
+Run specified shell script in the container. Argument \fIscript\fR is a file
+on the host system which contents is read by vzctl and executed in the
+context of the container. For a running container, the command jumps
+into the container and executes the script. For a stopped container, it
+enters the container, mounts container's root filesystem, executes the
+script, and unmounts CT root. In the latter case, the container is not
+really started, no file systems other than root (such as \fB/proc\fR)
+are mounted, no startup scripts are executed etc. Thus the environment
+in which the script is running is far from normal and is only usable for
+very basic operations.
+.IP "\fBenter\fR \fICTID\fR [\fB--exec \fIcommand\fR [\fIarg\fR ...]]" 4
+Enters into a container (giving a container's root shell). This option
+is a back-door for host root only. The proper way to have CT root shell
+is to use \fBssh\fR(1).
+
+Option \fB--exec\fR is used to run \fIcommand\fR with arguments
+after entering into container. This is useful if command to be run
+requires a terminal (so \fBvzctl exec\fR can not be used) and for
+some reason you can not use \fBssh\fR(1).
+
+You need to log out manually from the shell to finish session
+(even if you specified \fB--exec\fR).
+.IP "\fBconsole\fR \fICTID\fR [\fIttynum\fR]" 4
+Attach to a container console. Optional \fIttynum\fR argument is
+tty number (such as \fB4\fR for \fBtty4\fR), default is \fB1\fR
+which is used for container's \fB/dev/console\fR.
+
+Note the consoles are persistent, meaning that:
+.br
+\(bu it can be attached to even if the container is not running;
+.br
+\(bu there is no automatic detachment upon the container stop;
+.br
+\(bu detaching from the console leaves anything running in this console as is.
+
+The following escape sequences are recognized by \fBvzctl console\fR.
+Note that these sequences are only recognized at the beginning of a line.
+
+\(bu \fBEsc\fR then \fB.\fR to detach from the console.
+
+\(bu \fBEsc\fR then \fB!\fR to kill anything running on the console
+(SAK). This is helpful when one expects a login prompt but there isn't one.
+
+.SS Other options
+
+.IP \fB--help\fR 4
+Prints help message with a brief list of possible options.
+.IP \fB--version\fR 4
+Prints \fBvzctl\fR version.
+.SH ACTION SCRIPTS
+\fBvzctl\fR has an ability to execute user-defined scripts when
+a specific \fBvzctl\fR command is run for a container. The following
+\fBvzctl\fR commands can trigger execution of action scripts:
+\fBstart\fR, \fBstop\fR, \fBrestart\fR, \fBmount\fR and \fBumount\fR.
+
+Action scripts are located in the \fB/etc/vz/conf/\fR directory. There
+are global and per-CT scripts. Global scripts have a literal prefix of
+\fBvps.\fR and are executed for all containers. Per-CT scripts have
+a \fICTID\fB.\fR numeric prefix and are executed for the given container
+only.
+
+Please note scripts are executed in a host system (CT0) context,
+with the exception of \fB.start\fR and \fB.stop\fR scripts, which
+are executed in a container context.
+
+The following action scripts are currently defined:
+.IP "\fBvps.premount\fR, \fICTID\fB.premount\fR"
+Global and per-CT mount scripts which are executed for a
+container before it is mounted. Scripts are executed in the host system
+context, while a CT is not yet mounted or running. Global script,
+if exists, is executed first.
+.IP "\fBvps.mount\fR, \fICTID\fB.mount\fR"
+Global and per-CT mount scripts which are executed for a
+container right after it is mounted. Otherwise they are the same
+as \fB.premount\fR scripts.
+.IP \fICTID\fB.start\fR
+Right after \fBvzctl\fR has started a container, it executes this script
+in a container context.
+.IP \fICTID\fB.stop\fR
+Right before \fBvzctl\fR has stopped a container, it executes this script
+in a container context.
+.IP "\fBvps.umount\fR, \fICTID\fB.umount\fR"
+Global and per-CT umount scripts which are executed for a
+container before it is unmounted. Scripts are executed
+in the host system context, while a CT is mounted. Global script,
+if exists, is executed first.
+.IP "\fBvps.postumount\fR, \fICTID\fB.postumount\fR"
+Global and per-CT umount scripts which are executed for a
+container right after it is unmounted. Otherwise they are the same
+as \fB.umount\fR scripts.
+.PP
+The environment passed to all the \fB*mount\fR scripts is the standard
+environment of the parent (i.e. \fBvzctl\fR) with two additional
+variables: \fB$VEID\fR and \fB$VE_CONFFILE\fR. The first one holds
+the ID of the container, and the second one holds the full path
+to the container configuration file. If the script needs to get other
+CT configuration parameters, such as \fB$VE_ROOT\fR, it needs to get
+those from global and per-CT configuration files.
+.PP
+Here is an example of a mount script, which makes host system's
+/mnt/disk available to container(s). Script name can either be
+\fB/etc/vz/conf/vps.mount\fR or \fB/etc/vz/conf/\fICTID\fB.mount\fR.
+.PP
+.EX
+   # If one of these files does not exist then something
+   # is really broken
+   [ -f /etc/vz/vz.conf ] || exit 1
+   [ -f $VE_CONFFILE ] || exit 1
+   # Source both files. Note the order is important.
+   . /etc/vz/vz.conf
+   . $VE_CONFFILE
+   SRC=/mnt/disk
+   DST=/mnt/disk
+   mount -n -t simfs $SRC ${VE_ROOT}${DST} -o $SRC
+.EE
+.SH EXIT STATUS
+Returns 0 upon success, or an appropriate error code in case of an error:
+.IP 1
+Failed to set a UBC parameter
+.IP 2
+Failed to set a fair scheduler parameter
+.IP 3
+Generic system error
+.IP 5
+The running kernel is not an OpenVZ kernel (or some OpenVZ modules are not loaded)
+.IP 6
+Not enough system resources
+.IP 7
+\fBENV_CREATE\fR ioctl failed
+.IP 8
+Command executed by \fBvzctl exec\fR returned non-zero exit code
+.IP 9
+Container is locked by another \fBvzctl\fR invocation
+.IP 10
+Global OpenVZ configuration file \fBvz.conf\fR(5) not found
+.IP 11
+A vzctl helper script file not found
+.IP 12
+Permission denied
+.IP 13
+Capability setting failed
+.IP 14
+Container configuration file \fBctid.conf\fR(5) not found
+.IP 15
+Timeout on \fBvzctl exec\fR
+.IP 16
+Error during \fBvzctl suspend\fR
+.IP 17
+Error during \fBvzctl resume\fR
+.IP 18
+Error from \fBsetluid()\fR syscall
+.IP 20
+Invalid command line parameter
+.IP 21
+Invalid value for command line parameter
+.IP 22
+Container root directory (\fBVE_ROOT\fR) not set
+.IP 23
+Container private directory (\fBVE_PRIVATE\fR) not set
+.IP 24
+Container template directory (\fBTEMPLATE\fR) not set
+.IP 28
+Not all required UBC parameters are set, unable to start container
+.IP 29
+OS template is not specified, unable to create container
+.IP 31
+Container not running
+.IP 32
+Container already running
+.IP 33
+Unable to stop container
+.IP 34
+Unable to add IP address to container
+.IP 40
+Container not mounted
+.IP 41
+Container already mounted
+.IP 43
+Container private area not found
+.IP 44
+Container private area already exists
+.IP 46
+Not enough disk space
+.IP 47
+Bad/broken container (\fB/sbin/init\fR or \fB/bin/sh\fR not found)
+.IP 48
+Unable to create a new container private area
+.IP 49
+Unable to create a new container root area
+.IP 50
+Unable to mount container
+.IP 51
+Unable to unmount container
+.IP 52
+Unable to delete a container
+.IP 53
+Container private area not exist
+.IP 60
+\fBvzquota on\fR failed
+.IP 61
+\fBvzquota init\fR failed
+.IP 62
+\fBvzquota setlimit\fR failed
+.IP 63
+Parameter \fBDISKSPACE\fR not set
+.IP 64
+Parameter \fBDISKINODES\fR not set
+.IP 65
+Error setting in-container disk quotas
+.IP 66
+\fBvzquota off\fR failed
+.IP 67
+ugid quota not initialized
+.IP 71
+Incorrect IP address format
+.IP 74
+Error changing password
+.IP 78
+IP address already in use
+.IP 79
+Container action script returned an error
+.IP 82
+Config file copying error
+.IP 86
+Error setting devices (\fB--devices\fR or \fB--devnodes\fR)
+.IP 89
+IP address not available
+.IP 91
+OS template not found
+.IP 99
+Ploop is not supported by either the running kernel or vzctl.
+.IP 100
+Unable to find container IP address
+.IP 104
+\fBVE_NETDEV\fR ioctl error
+.IP 105
+Container start disabled
+.IP 106
+Unable to set iptables on a running container
+.IP 107
+Distribution-specific configuration file not found
+.IP 109
+Unable to apply a config
+.IP 129
+Unable to set meminfo parameter
+.IP 130
+Error setting veth interface
+.IP 131
+Error setting container name
+.IP 133
+Waiting for container start failed
+.IP 139
+Error saving container configuration file
+.IP 148
+Error setting container IO parameters (ioprio)
+.IP 150
+Ploop image file not found
+.IP 151
+Error creating ploop image
+.IP 152
+Error mounting ploop image
+.IP 153
+Error unmounting ploop image
+.IP 154
+Error resizing ploop image
+.IP 155
+Error converting container to ploop layout
+.IP 156
+Error creating ploop snapshot
+.IP 157
+Error merging ploop snapshot
+.IP 158
+Error deleting ploop snapshot
+.IP 159
+Error switching  ploop snapshot
+.IP 166
+Error compacting ploop image
+.IP 167
+Error listing ploop snapsots
+.SH EXAMPLES
+To create and start "basic" container with ID of 1000 using
+\fBcentos-5\fR OS template and IP address of 192.168.10.200:
+.PP
+.EX
+   vzctl create 1000 --ostemplate centos-5 --config basic
+   vzctl set 1000 --ipadd 192.168.10.200 --save
+   vzctl start 1000
+.EE
+
+To set number of processes barrier/limit to 80/100, and
+PTY barrier/limit to 16/20 PTYs:
+.PP
+.EX
+   vzctl set 1000 --numproc 80:100 -t 16:20 --save
+.EE
+
+To execute command \fBls -la\fR in this container:
+.PP
+.EX
+   vzctl exec 1000 /bin/ls -la
+.EE
+
+To execute command pipe \fBls -l / | sort\fR in this container:
+.PP
+.EX
+   vzctl exec 1000 'ls -l / | sort'
+.EE
+
+To enter this container and execute command \fBapt-get install vim\fR:
+.PP
+.EX
+   vzctl enter 1000 --exec apt-get install vim
+.EE
+.PP
+Note that in the above example you will need to log out from the
+container's shell after apt-get finishes.
+
+To enter this container, execute command \fBapt-get install vim\fR and
+logout after successful installation (or stay inside the container
+if installation process failed) use \fB&&\fR:
+.PP
+.EX
+   vzctl enter 1000 --exec "apt-get install vim && logout"
+.EE
+
+To enter this container, execute command \fBapt-get install vim\fR and logout
+independently of exit code of installation process use \fB;\fR:
+.PP
+.EX
+   vzctl enter 1000 --exec "apt-get install vim ; logout"
+.EE
+.PP
+Note that you need to quote the command if you use \fB&&\fR or \fB;\fR.
+
+To stop this container:
+.PP
+.EX
+   vzctl stop 1000
+.EE
+
+To permanently remove this container:
+.PP
+.EX
+   vzctl destroy 1000
+.EE
+.SH FILES
+.EX
+/etc/vz/vz.conf
+/etc/vz/conf/\fICTID\fB\f(CR.conf
+/etc/vz/conf/vps.{premount,mount,umount,postumount}
+/etc/vz/conf/\fICTID\fB\f(CR.{premount,mount,start,stop,umount,postumount}
+/proc/vz/veinfo
+/proc/vz/vzquota
+/proc/user_beancounters
+/proc/bc/*
+/proc/fairsched\fR
+.EE
+.SH SEE ALSO
+.BR vz.conf (5),
+.BR ctid.conf (5),
+.BR arpsend (8),
+.BR vzcalc (8),
+.BR vzcfgvalidate (8),
+.BR vzcpucheck (8),
+.BR vzifup-post (8),
+.BR vzlist (8),
+.BR vzmemcheck (8),
+.BR vzmigrate (8),
+.BR vzpid (8),
+.BR vzquota (8),
+.BR vzsplit (8),
+.BR vzubc (8),
+.BR http://wiki.openvz.org/UBC .
+.SH LICENSE
+Copyright (C) 2000-2013, Parallels, Inc. Licensed under GNU GPL.
