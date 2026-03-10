@@ -1,0 +1,3 @@
+[submodule "ubuntu-manpages-operator"]
+	path = ubuntu-manpages-operator
+	url = git@github.com:idank/ubuntu-manpages-operator.git
